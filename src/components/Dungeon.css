@@ -1,0 +1,13 @@
+.dungeon {
+    width: 100vw;
+    height: 60vh;
+    background-image: url("/background/bgTest.png");
+    background-repeat: repeat-x;
+    background-position: 0 0;
+    background-size: contain;
+    overflow: hidden;
+    position: relative;
+    top: 0;
+    left: 0;
+    z-index: 0;
+}
