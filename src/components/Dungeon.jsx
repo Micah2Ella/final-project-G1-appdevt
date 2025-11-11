@@ -1,14 +1,56 @@
 import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
 import "./Dungeon.css";
+import Encounters from "./Encounters";
 
-const Dungeon = forwardRef((props, ref) => {
+const Dungeon = forwardRef(({ onEncounter }, ref) => {
     const bgRef = useRef(null);
     const offsetRef = useRef(0);
     const [isPaused, setIsPaused] = useState(false);
+    const [visibleEncounters, setVisibleEncounters] = useState([]);
+    const encounters = useRef([]);
 
-    const speed = 0.5;
-    const imageWidth = 720; // adjust according to image width in px
+    const speed = 0.8;
+    const currentOffset = offsetRef.current;
     const viewportWidth = window.innerWidth;
+    const triggerX = viewportWidth * 0.6;
+
+    const generateEncounters = (cycle = 1) => {
+        const encounterPool = [
+            {type: "fountain", weight: 0.25}, 
+            {type: "enemy", weight: 0.65}, 
+            {type: "crossroads", weight: 0.10},
+        ];
+
+        const weightedRandom = () => {
+            const r = Math.random();
+            let acc = 0;
+            for (const e of encounterPool) {
+                acc += e.weight;
+                if (r <= acc) return e.type;
+            }
+            return "enemy";
+        };
+
+        const list = [];
+        let pos = currentOffset + viewportWidth + 800;
+        
+        // three randomly generated encounters
+        for (let i = 0; i < 3; i++) {
+            pos +=  1200 + Math.random() * 2000;
+            list.push({ position: pos, type: weightedRandom(), triggered: false });
+        }
+
+        // aethercrest after 3 encounters
+        pos += 1500;
+        list.push({
+            position: pos,
+            type: "aethercrest",
+            triggered: false,
+        })
+
+        console.log(`Cycle ${cycle}: Generated`, list);
+        return list;
+    }
 
     useImperativeHandle(ref, () => ({
         pause() {
@@ -19,7 +61,19 @@ const Dungeon = forwardRef((props, ref) => {
             setIsPaused(false);
             console.log("Scrolling resumed");
         },
+        regenerateEncounters() {
+            // generate new encounter map
+            const newEncounters = generateEncounters();
+            encounters.current.push(...newEncounters);
+            setIsPaused(false);
+            console.log("New encounter map generated:", newEncounters);
+        }
     }));
+
+    useEffect(() => {
+        encounters.current = generateEncounters();
+        console.log("Generated encounters:", encounters.current);
+    }, []);
 
     useEffect(() => {
         const element = bgRef.current;
@@ -27,16 +81,26 @@ const Dungeon = forwardRef((props, ref) => {
 
         const loop = () => {
             if (!isPaused && element){
-                offsetRef.current -= speed;
+                offsetRef.current += speed;
                 const offset = offsetRef.current;
-                element.style.backgroundPosition = `${offset}px 0`;
+                element.style.backgroundPosition = `-${offset}px 0`;
 
-                const centerPos = -(imageWidth / 2 - viewportWidth / 2);
+                const updated = encounters.current.map((e) => ({
+                    ...e,
+                    x: e.position - offset,
+                    y: 50,
+                }));
+                setVisibleEncounters(updated);
 
-                if (Math.abs(offset - centerPos) < speed) {
-                    setIsPaused(true);
-                    console.log("Encounter point reached!")
-                    // Later: trigger encounter here.
+                for (const e of encounters.current) {
+                    if (!e.triggered && e.position - offset <= triggerX) {
+                        e.triggered = true;
+                        setIsPaused(true);
+                        console.log("Encounter triggered:", e.type);
+                        // Later: trigger encounters here.
+                        if (onEncounter) onEncounter(e.type);
+                        break;
+                    }
                 }
             }
             frameId = requestAnimationFrame(loop);
@@ -44,13 +108,18 @@ const Dungeon = forwardRef((props, ref) => {
 
         loop();
         return () => cancelAnimationFrame(frameId);
-    }, [isPaused]);
+    }, [isPaused, onEncounter]);
 
     return (
         <div className="dungeon" ref={bgRef}>
+            {/* Render moving encounter icons */}
+            {visibleEncounters.map((e, index) => (
+                <Encounters key={index} type={e.type} x={e.x} y={e.y} />
+            ))}
+
             {/* Later: add <Player />, <Enemy />, <UI />, etc. */}
         </div>
-    )
+    );
 });
 
 export default Dungeon;
