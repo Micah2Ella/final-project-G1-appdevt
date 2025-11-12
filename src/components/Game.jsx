@@ -1,9 +1,11 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Dungeon from "./Dungeon";
+import "../App.css";
 
 export default function Game({ player }) {
   const dungeonRef = useRef();
   const [encounter, setEncounter] = useState(null);
+  const [intro, setIntro] = useState(true);
 
   const handleEncounter = (type) => {
     console.log("Encounter triggered:", type);
@@ -16,6 +18,11 @@ export default function Game({ player }) {
     dungeonRef.current.resume(); // Scrolling resumes
   }
 
+  useEffect(() => {
+    const timer = setTimeout(() => setIntro(false), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div
       style={{
@@ -24,7 +31,7 @@ export default function Game({ player }) {
         position: "relative"
       }}
     >
-      <Dungeon ref={dungeonRef} onEncounter={handleEncounter}/>
+      <Dungeon ref={dungeonRef} onEncounter={handleEncounter} player={player}/>
       <div
         style={{
           height: "40vh",
@@ -39,13 +46,32 @@ export default function Game({ player }) {
           zIndex: 1,
         }}
       >
-        <h1>Welcome, {player.playerName}!</h1>
-        <h2>You chose: {player.name}</h2>
-        <p>HP: {player.baseStats.HP} | ATK: {player.baseStats.ATK} | SPD: {player.baseStats.SPD} | DEF: {player.baseStats.DEF}</p>
+        {/* Intro */}
+        {intro && (
+          <div className="intro">
+            <div>
+              <h1>Welcome, {player.playerName}!</h1>
+              <h2>You chose: {player.name}</h2>
+              <p>HP: {player.baseStats.HP} | ATK: {player.baseStats.ATK} | SPD: {player.baseStats.SPD} | DEF: {player.baseStats.DEF}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Stats Bar */}
+        <div className="statbar">
+          <h2>{player.playerName}</h2>
+          <h2>{player.name}</h2>
+          <div className="grouped-stats">
+            <h2>♥️{player.baseStats.HP}</h2>
+            <h2>🗡️{player.baseStats.ATK}</h2>
+            <h2>👟{player.baseStats.SPD}</h2>
+            <h2>🛡️{player.baseStats.DEF}</h2>
+          </div>
+        </div>
 
         {/* Encounter UI */}
         {encounter === "fountain" && (
-          <div style ={{ marginTop: "20px", textAlign: "center"}}>
+          <div className="UI">
             <h3>HEALING FOUNTAIN</h3>
             <p>
               You recover 10 health.
@@ -66,11 +92,33 @@ export default function Game({ player }) {
             </button>
           </div>
         )}
-        {encounter === "enemy" && (
-          <div style ={{ marginTop: "20px", textAlign: "center"}}>
-            <h3>ENEMY ENCOUNTER</h3>
+        {encounter === "bat1" && (
+          <div className="UI">
+            <h3>NORMAL BAT ENCOUNTER</h3>
             <p>
-              You face a bat.
+              You face a normal bat.
+            </p>
+            <button
+              onClick={handleExitEncounter}
+              style={{
+                marginTop: "10px",
+                padding: "0.5rem 1rem",
+                background: "linear-gradient(to right, #2f80ed, #56ccf2)",
+                color: "white",
+                border: "none",
+                borderRadius: "0.5rem",
+                cursor: "pointer",
+              }}
+            >
+              Continue
+            </button>
+          </div>
+        )}
+        {encounter === "bat2" && (
+          <div className="UI">
+            <h3>STRONG BAT ENCOUNTER</h3>
+            <p>
+              You face a strong bat.
             </p>
             <button
               onClick={handleExitEncounter}
@@ -89,7 +137,7 @@ export default function Game({ player }) {
           </div>
         )}
         {encounter === "crossroads" && (
-          <div style ={{ marginTop: "20px", textAlign: "center"}}>
+          <div className="UI">
             <h3>CROSSROADS</h3>
             <p>
               You reached a fork in the road.
@@ -113,7 +161,7 @@ export default function Game({ player }) {
           </div>
         )}
         {encounter === "aethercrest" && (
-          <div style ={{ marginTop: "20px", textAlign: "center"}}>
+          <div className="UI">
             <h3>AETHERCREST</h3>
             <p>
               Aethercrest obtained.

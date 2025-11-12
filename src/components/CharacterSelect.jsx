@@ -128,6 +128,10 @@ export default function CharacterSelect({ onSelect }) {
           align-items: center;
         }
 
+        .character-card:hover {
+          cursor: url("/cursor/Hand3.png"), pointer;
+        }
+
         .char-image-wrapper {
           position: relative;
           width: 100%;

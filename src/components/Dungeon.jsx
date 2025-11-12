@@ -1,23 +1,25 @@
 import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
-import "./Dungeon.css";
+import "../App.css";
 import Encounters from "./Encounters";
+import Player from "./Player";
 
-const Dungeon = forwardRef(({ onEncounter }, ref) => {
+const Dungeon = forwardRef(({ onEncounter, player }, ref) => {
     const bgRef = useRef(null);
     const offsetRef = useRef(0);
     const [isPaused, setIsPaused] = useState(false);
     const [visibleEncounters, setVisibleEncounters] = useState([]);
     const encounters = useRef([]);
 
-    const speed = 0.8;
+    const speed = 1;
     const currentOffset = offsetRef.current;
     const viewportWidth = window.innerWidth;
     const triggerX = viewportWidth * 0.6;
 
     const generateEncounters = (cycle = 1) => {
         const encounterPool = [
-            {type: "fountain", weight: 0.25}, 
-            {type: "enemy", weight: 0.65}, 
+            {type: "fountain", weight: 0.15}, 
+            {type: "bat1", weight: 0.65}, 
+            {type: "bat2", weight: 0.10}, 
             {type: "crossroads", weight: 0.10},
         ];
 
@@ -28,7 +30,7 @@ const Dungeon = forwardRef(({ onEncounter }, ref) => {
                 acc += e.weight;
                 if (r <= acc) return e.type;
             }
-            return "enemy";
+            return "bat1";
         };
 
         const list = [];
@@ -87,8 +89,7 @@ const Dungeon = forwardRef(({ onEncounter }, ref) => {
 
                 const updated = encounters.current.map((e) => ({
                     ...e,
-                    x: e.position - offset,
-                    y: 50,
+                    x: e.position - offset
                 }));
                 setVisibleEncounters(updated);
 
@@ -114,8 +115,11 @@ const Dungeon = forwardRef(({ onEncounter }, ref) => {
         <div className="dungeon" ref={bgRef}>
             {/* Render moving encounter icons */}
             {visibleEncounters.map((e, index) => (
-                <Encounters key={index} type={e.type} x={e.x} y={e.y} />
+                <Encounters key={index} type={e.type} x={e.x} />
             ))}
+
+            {/* Player fixed on screen */}
+            <Player isPaused={isPaused} player={player}/>
 
             {/* Later: add <Player />, <Enemy />, <UI />, etc. */}
         </div>

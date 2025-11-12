@@ -4,6 +4,11 @@ html, body {
   overflow: hidden;
   height: 100%;
   background-color: black;
+  cursor: url("/cursor/Arrow2.png"), auto;
+}
+
+a:hover, button:hover {
+  cursor: url("/cursor/Hand3.png"), pointer!important;
 }
 
 .fade-wrapper {
@@ -16,4 +21,101 @@ html, body {
 
 .fade-out {
   opacity: 0;
+}
+
+.dungeon {
+  width: 100vw;
+  height: 60vh;
+  background-image: url("/background/bgTest.png");
+  background-repeat: repeat-x;
+  background-position: 0 0;
+  background-size: contain;
+  overflow: hidden;
+  position: relative;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  border-bottom: 2px solid white;
+}
+
+.intro {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  text-align: center;
+  animation: fadeOut 1s ease 2.5s forwards;
+  background-color: black;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+  }
+}
+
+.UI {
+  text-align: center;
+  font-size: larger;
+  margin-top: -10%;
+}
+
+.statbar {
+  position: fixed;
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr;
+  background-color: black;
+  left: 0;
+  bottom: 0;
+  padding: 1% 0;
+  border-top: 2px solid white;
+  width: 100%;
+  z-index: 5;
+  align-items: center;
+  justify-items: center;
+  text-align: center;
+}
+
+.grouped-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1vw;
+  justify-items: center;
+}
+
+@keyframes figureMovement {
+  0%, 100% {transform: translate(25px, 15px);}
+  25% {transform: translate(15px, -15px);}
+  50% {transform: translate(-15px, 15px);}
+  75% {transform: translate(-25px, -15px);}
+}
+
+@keyframes floatMovement {
+  0%, 100% {transform: translateY(10px);}
+  50% {transform: translateY(-30px);}
+}
+
+@keyframes runMovement {
+  0%, 100% {transform: translateX(-50%) translateY(0px);}
+  50% {transform: translateX(-50%) translateY(-10px);}
+}
+
+.figure8 {
+  animation: figureMovement 2s ease-in-out infinite;
+}
+
+.float {
+  animation: floatMovement 3s ease-in-out infinite;
+}
+
+.run {
+  animation: runMovement 0.3s ease-in-out infinite;
 }
