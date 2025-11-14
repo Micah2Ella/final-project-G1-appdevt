@@ -31,7 +31,9 @@ export default function Game({ player }) {
         position: "relative"
       }}
     >
-      <Dungeon ref={dungeonRef} onEncounter={handleEncounter} player={player}/>
+      <div className="dungeon-wrapper">
+        <Dungeon ref={dungeonRef} onEncounter={handleEncounter} player={player}/>
+      </div>
       <div
         style={{
           height: "40vh",
@@ -57,136 +59,79 @@ export default function Game({ player }) {
           </div>
         )}
 
-        {/* Stats Bar */}
-        <div className="statbar">
-          <h2>{player.playerName}</h2>
-          <h2>{player.name}</h2>
-          <div className="grouped-stats">
-            <h2>♥️{player.baseStats.HP}</h2>
-            <h2>🗡️{player.baseStats.ATK}</h2>
-            <h2>👟{player.baseStats.SPD}</h2>
-            <h2>🛡️{player.baseStats.DEF}</h2>
+        {/* Game UI */}
+        <div className="game-ui">
+          {/* Stats Bar */}
+          <div className="statbar">
+            <h2>{player.playerName} || {player.name}</h2>
+            <div className="grouped-stats">
+              <h2>♥️{player.baseStats.HP}</h2>
+              <h2>🗡️{player.baseStats.ATK}</h2>
+              <h2>👟{player.baseStats.SPD}</h2>
+              <h2>🛡️{player.baseStats.DEF}</h2>
+            </div>
+          </div>
+
+          {/* Encounter UI */}
+          <div className="encounter-container">
+            {encounter === "fountain" && (
+              <div className="UI">
+                <h3>HEALING FOUNTAIN</h3>
+                <p>
+                  You recover 10 health.
+                </p>
+                <button onClick={handleExitEncounter}>Continue</button>
+              </div>
+            )}
+            {encounter === "bat1" && (
+              <div className="UI">
+                <h3>NORMAL BAT ENCOUNTER</h3>
+                <p>
+                  You face a normal bat.
+                </p>
+                <button onClick={handleExitEncounter}>Continue</button>
+              </div>
+            )}
+            {encounter === "bat2" && (
+              <div className="UI">
+                <h3>STRONG BAT ENCOUNTER</h3>
+                <p>
+                  You face a strong bat.
+                </p>
+                <button onClick={handleExitEncounter}>Continue</button>
+              </div>
+            )}
+            {encounter === "crossroads" && (
+              <div className="UI">
+                <h3>CROSSROADS</h3>
+                <p>
+                  You reached a fork in the road.
+                  The left road continues on the void.
+                  At the end of the right road, you see a glistening blue.
+                </p>
+                <button onClick={handleExitEncounter}>Continue</button>
+              </div>
+            )}
+            {encounter === "aethercrest" && (
+              <div className="UI">
+                <h3>AETHERCREST</h3>
+                <p>
+                  Aethercrest obtained.
+                </p>
+                <button
+                  onClick={() => {
+                    setTimeout(() => {
+                      dungeonRef.current.regenerateEncounters();
+                      handleExitEncounter();
+                    }, 500);
+                  }}
+                >
+                  Continue
+                </button>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Encounter UI */}
-        {encounter === "fountain" && (
-          <div className="UI">
-            <h3>HEALING FOUNTAIN</h3>
-            <p>
-              You recover 10 health.
-            </p>
-            <button
-              onClick={handleExitEncounter}
-              style={{
-                marginTop: "10px",
-                padding: "0.5rem 1rem",
-                background: "linear-gradient(to right, #2f80ed, #56ccf2)",
-                color: "white",
-                border: "none",
-                borderRadius: "0.5rem",
-                cursor: "pointer",
-              }}
-            >
-              Continue
-            </button>
-          </div>
-        )}
-        {encounter === "bat1" && (
-          <div className="UI">
-            <h3>NORMAL BAT ENCOUNTER</h3>
-            <p>
-              You face a normal bat.
-            </p>
-            <button
-              onClick={handleExitEncounter}
-              style={{
-                marginTop: "10px",
-                padding: "0.5rem 1rem",
-                background: "linear-gradient(to right, #2f80ed, #56ccf2)",
-                color: "white",
-                border: "none",
-                borderRadius: "0.5rem",
-                cursor: "pointer",
-              }}
-            >
-              Continue
-            </button>
-          </div>
-        )}
-        {encounter === "bat2" && (
-          <div className="UI">
-            <h3>STRONG BAT ENCOUNTER</h3>
-            <p>
-              You face a strong bat.
-            </p>
-            <button
-              onClick={handleExitEncounter}
-              style={{
-                marginTop: "10px",
-                padding: "0.5rem 1rem",
-                background: "linear-gradient(to right, #2f80ed, #56ccf2)",
-                color: "white",
-                border: "none",
-                borderRadius: "0.5rem",
-                cursor: "pointer",
-              }}
-            >
-              Continue
-            </button>
-          </div>
-        )}
-        {encounter === "crossroads" && (
-          <div className="UI">
-            <h3>CROSSROADS</h3>
-            <p>
-              You reached a fork in the road.
-              The left road continues on the void.
-              At the end of the right road, you see a glistening blue.
-            </p>
-            <button
-              onClick={handleExitEncounter}
-              style={{
-                marginTop: "10px",
-                padding: "0.5rem 1rem",
-                background: "linear-gradient(to right, #2f80ed, #56ccf2)",
-                color: "white",
-                border: "none",
-                borderRadius: "0.5rem",
-                cursor: "pointer",
-              }}
-            >
-              Continue
-            </button>
-          </div>
-        )}
-        {encounter === "aethercrest" && (
-          <div className="UI">
-            <h3>AETHERCREST</h3>
-            <p>
-              Aethercrest obtained.
-            </p>
-            <button
-              onClick={() => {
-                setTimeout(() => {
-                  dungeonRef.current.regenerateEncounters();
-                  handleExitEncounter();
-                }, 500);
-              }}
-              style={{
-                marginTop: "10px",
-                padding: "0.5rem 1rem",
-                background: "linear-gradient(to right, #2f80ed, #56ccf2)",
-                color: "white",
-                border: "none",
-                borderRadius: "0.5rem",
-                cursor: "pointer",
-              }}
-            >
-              Continue
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

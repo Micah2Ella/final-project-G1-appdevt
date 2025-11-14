@@ -9,11 +9,12 @@ const Dungeon = forwardRef(({ onEncounter, player }, ref) => {
     const [isPaused, setIsPaused] = useState(false);
     const [visibleEncounters, setVisibleEncounters] = useState([]);
     const encounters = useRef([]);
+    const [encountersReady, setEncountersReady] = useState(false);
+    const triggeredEncounterRef = useRef(null);
+    const isResizingRef = useRef(false);
+    const lockedVisibleRef = useRef([]);
 
     const speed = 1;
-    const currentOffset = offsetRef.current;
-    const viewportWidth = window.innerWidth;
-    const triggerX = viewportWidth * 0.6;
 
     const generateEncounters = (cycle = 1) => {
         const encounterPool = [
@@ -34,7 +35,8 @@ const Dungeon = forwardRef(({ onEncounter, player }, ref) => {
         };
 
         const list = [];
-        let pos = currentOffset + viewportWidth + 800;
+        const currentOffset = offsetRef.current;
+        let pos = currentOffset + 2000;
         
         // three randomly generated encounters
         for (let i = 0; i < 3; i++) {
@@ -56,10 +58,12 @@ const Dungeon = forwardRef(({ onEncounter, player }, ref) => {
 
     useImperativeHandle(ref, () => ({
         pause() {
+            lockedVisibleRef.current = visibleEncounters;
             setIsPaused(true);
             console.log("Scrolling paused");
         },
         resume() {
+            triggeredEncounterRef.current = null;
             setIsPaused(false);
             console.log("Scrolling resumed");
         },
@@ -75,6 +79,8 @@ const Dungeon = forwardRef(({ onEncounter, player }, ref) => {
     useEffect(() => {
         encounters.current = generateEncounters();
         console.log("Generated encounters:", encounters.current);
+
+        requestAnimationFrame(() => setEncountersReady(true));
     }, []);
 
     useEffect(() => {
@@ -87,17 +93,24 @@ const Dungeon = forwardRef(({ onEncounter, player }, ref) => {
                 const offset = offsetRef.current;
                 element.style.backgroundPosition = `-${offset}px 0`;
 
-                const updated = encounters.current.map((e) => ({
-                    ...e,
-                    x: e.position - offset
-                }));
+                const updated = encounters.current
+                    .map((e) => ({
+                        ...e,
+                        x: e.position - offset
+                    }))
+                    .filter((e) => {
+                        if (isResizingRef.current) return false;
+                        return e.x >= -200 && e.x <= window.innerWidth + 200;
+                    })
                 setVisibleEncounters(updated);
 
+                const triggerX = window.innerWidth * 0.6;
+
                 for (const e of encounters.current) {
-                    if (!e.triggered && e.position - offset <= triggerX) {
+                    if (!isResizingRef.current && !e.triggered && e.position - offset <= triggerX) {
                         e.triggered = true;
                         setIsPaused(true);
-                        console.log("Encounter triggered:", e.type);
+                        console.log("Encounter triggered:", e.type, "at position:", triggerX);
                         // Later: trigger encounters here.
                         if (onEncounter) onEncounter(e.type);
                         break;
@@ -111,10 +124,52 @@ const Dungeon = forwardRef(({ onEncounter, player }, ref) => {
         return () => cancelAnimationFrame(frameId);
     }, [isPaused, onEncounter]);
 
+    useEffect(() => {
+        let resizeTimeout;
+        let oldWidth = window.innerWidth;
+
+        const handleResize = () => {
+            isResizingRef.current = true;
+            const oldTriggerX = oldWidth * 0.6;
+
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (isPaused) { 
+                    setVisibleEncounters(lockedVisibleRef.current);
+                    isResizingRef.current = false; 
+                    return; 
+                }
+                const newWidth = window.innerWidth;
+                const newTriggerX = window.innerWidth * 0.6;
+
+                const delta = newTriggerX - oldTriggerX;
+
+                offsetRef.current -= delta;
+
+                if (bgRef.current) {
+                    bgRef.current.style.backgroundPosition = 
+                        `-${offsetRef.current}px 0`;
+                }
+
+                setVisibleEncounters(
+                    encounters.current
+                        .map(e => ({ ...e, x: e.position - offsetRef.current }))
+                        .filter(e => e.x >= -200 && e.x <= window.innerWidth + 200)
+                );
+
+                oldWidth = newWidth;
+                isResizingRef.current = false;
+            }, 80);
+        };
+
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
     return (
         <div className="dungeon" ref={bgRef}>
             {/* Render moving encounter icons */}
-            {visibleEncounters.map((e, index) => (
+            {encountersReady && visibleEncounters.map((e, index) => (
                 <Encounters key={index} type={e.type} x={e.x} />
             ))}
 
