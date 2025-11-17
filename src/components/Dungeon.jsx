@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } f
 import "../App.css";
 import Encounters from "./Encounters";
 import Player from "./Player";
+import NodeBar from "./NodeBar";
 
-const Dungeon = forwardRef(({ onEncounter, player }, ref) => {
+const Dungeon = forwardRef(({ onEncounter, player, onCrossroadsChoice }, ref) => {
     const bgRef = useRef(null);
     const offsetRef = useRef(0);
     const [isPaused, setIsPaused] = useState(false);
@@ -14,14 +15,16 @@ const Dungeon = forwardRef(({ onEncounter, player }, ref) => {
     const isResizingRef = useRef(false);
     const lockedVisibleRef = useRef([]);
 
-    const speed = 1;
+    // modify for testing
+    const speed = 100;
 
     const generateEncounters = (cycle = 1) => {
+        // modify for testing
         const encounterPool = [
-            {type: "fountain", weight: 0.15}, 
-            {type: "bat1", weight: 0.65}, 
-            {type: "bat2", weight: 0.10}, 
-            {type: "crossroads", weight: 0.10},
+            {type: "fountain", weight: 0.15}, // default: 0.15 
+            {type: "bat1", weight: 0.65}, // default: 0.65
+            {type: "bat2", weight: 0.10}, // default: 0.10
+            {type: "crossroads", weight: 0.10}, // default: 0.10
         ];
 
         const weightedRandom = () => {
@@ -37,11 +40,37 @@ const Dungeon = forwardRef(({ onEncounter, player }, ref) => {
         const list = [];
         const currentOffset = offsetRef.current;
         let pos = currentOffset + 2000;
+
+        let placedCrossroads = false;
         
         // three randomly generated encounters
         for (let i = 0; i < 3; i++) {
             pos +=  1200 + Math.random() * 2000;
-            list.push({ position: pos, type: weightedRandom(), triggered: false });
+
+            // crossroads mystery code
+            if (placedCrossroads) {
+                list.push({
+                    position: pos,
+                    type: "mystery",
+                    triggered: false,
+                    isMystery: true
+                });
+                placedCrossroads = false;
+                continue;
+            }
+
+            let type = weightedRandom();
+
+            // prevent crossroads from being the 3rd encounter
+            if (i === 2 && type === "crossroads") {
+                while (type === "crossroads") {
+                    type = weightedRandom();
+                }
+            }
+            
+            if (type == "crossroads") placedCrossroads = true;
+
+            list.push({ position: pos, type, triggered: false });
         }
 
         // aethercrest after 3 encounters
@@ -67,6 +96,16 @@ const Dungeon = forwardRef(({ onEncounter, player }, ref) => {
             setIsPaused(false);
             console.log("Scrolling resumed");
         },
+        setMysteryType(chosenType) {
+            for (const e of encounters.current) {
+                if (e.isMystery) {
+                    e.type = chosenType;
+                    e.isMystery = false;
+                    console.log("Mystery node set to:", chosenType);
+                    break;
+                }
+            }
+        },
         regenerateEncounters() {
             // generate new encounter map
             const newEncounters = generateEncounters();
@@ -87,8 +126,15 @@ const Dungeon = forwardRef(({ onEncounter, player }, ref) => {
         const element = bgRef.current;
         let frameId;
 
+        // let lastTime = performance.now();
+
+        // const loop = (now) => {
+        //     const dt = now - lastTime;
+        //     lastTime = now;
         const loop = () => {
             if (!isPaused && element){
+                // const SPEED = 150;
+                // offsetRef.current += (SPEED * dt) / 1000;
                 offsetRef.current += speed;
                 const offset = offsetRef.current;
                 element.style.backgroundPosition = `-${offset}px 0`;
@@ -111,7 +157,28 @@ const Dungeon = forwardRef(({ onEncounter, player }, ref) => {
                         e.triggered = true;
                         setIsPaused(true);
                         console.log("Encounter triggered:", e.type, "at position:", triggerX);
-                        // Later: trigger encounters here.
+                        
+                        // If crossroads, show available choices
+                        if (e.type === "crossroads") {
+                            const index = encounters.current.indexOf(e);
+                            const next = encounters.current[index + 1];
+
+                            if (next && next.isMystery) {
+                                const options = [
+                                    ["bat1", "bat2"],
+                                    ["bat2", "bat1"],
+                                    ["bat1", "fountain"],
+                                    ["fountain", "bat1"],
+                                    ["bat2", "fountain"],
+                                    ["fountain", "bat2"],
+                                ];
+
+                                const pair = options[Math.floor(Math.random() * options.length)];
+                                onCrossroadsChoice(pair);
+                            }
+                        }
+
+                        // trigger encounters
                         if (onEncounter) onEncounter(e.type);
                         break;
                     }
@@ -120,6 +187,7 @@ const Dungeon = forwardRef(({ onEncounter, player }, ref) => {
             frameId = requestAnimationFrame(loop);
         };
 
+        // requestAnimationFrame(loop);
         loop();
         return () => cancelAnimationFrame(frameId);
     }, [isPaused, onEncounter]);
@@ -175,6 +243,12 @@ const Dungeon = forwardRef(({ onEncounter, player }, ref) => {
 
             {/* Player fixed on screen */}
             <Player isPaused={isPaused} player={player}/>
+
+            {/* Node Bar */}
+            <NodeBar 
+                encounters={encounters.current}
+                playerPos={offsetRef.current}
+            />
 
             {/* Later: add <Player />, <Enemy />, <UI />, etc. */}
         </div>

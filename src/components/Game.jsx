@@ -6,17 +6,50 @@ export default function Game({ player }) {
   const dungeonRef = useRef();
   const [encounter, setEncounter] = useState(null);
   const [intro, setIntro] = useState(true);
+  const [crossroadsChoices, setCrossroadsChoices] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false); // to prevent spam clicking
 
   const handleEncounter = (type) => {
     console.log("Encounter triggered:", type);
     setEncounter(type);
+    setIsProcessing(false);
+  };
+
+  const handleCrossroadsChoice = (choices) => {
+    console.log("Crossroads choices:", choices);
+    setCrossroadsChoices(choices);
+  };
+
+  const handlePlayerChoice = (chosenType) => {
+    if (isProcessing) return;
+
+    setIsProcessing(true);
+    console.log("Player chose:", chosenType);
+    dungeonRef.current.setMysteryType(chosenType);
+    setCrossroadsChoices(null);
+    handleExitEncounter();
   };
 
   const handleExitEncounter = () => {
+    if (isProcessing) return;
+
+    setIsProcessing(true);
     console.log("Encounter ended!");
     setEncounter(null);
     dungeonRef.current.resume(); // Scrolling resumes
-  }
+  };
+
+  const handleAethercrest = () => {
+    if (isProcessing) return;
+
+    setIsProcessing(true);
+    setTimeout(() => {
+      dungeonRef.current.regenerateEncounters();
+      setEncounter(null);
+      dungeonRef.current.resume();
+      setIsProcessing(false);
+    }, 500);
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setIntro(false), 3000);
@@ -32,7 +65,7 @@ export default function Game({ player }) {
       }}
     >
       <div className="dungeon-wrapper">
-        <Dungeon ref={dungeonRef} onEncounter={handleEncounter} player={player}/>
+        <Dungeon ref={dungeonRef} onEncounter={handleEncounter} onCrossroadsChoice={handleCrossroadsChoice} player={player}/>
       </div>
       <div
         style={{
@@ -74,59 +107,94 @@ export default function Game({ player }) {
 
           {/* Encounter UI */}
           <div className="encounter-container">
+            {/* FOUNTAIN */}
             {encounter === "fountain" && (
               <div className="UI">
                 <h3>HEALING FOUNTAIN</h3>
                 <p>
                   You recover 10 health.
                 </p>
-                <button onClick={handleExitEncounter}>Continue</button>
+                <button 
+                  onClick={handleExitEncounter} 
+                  disabled={isProcessing}
+                  style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
+                >
+                  {isProcessing ? "Processing..." : "Continue"}
+                </button>
               </div>
             )}
+            {/* BAT1 */}
             {encounter === "bat1" && (
               <div className="UI">
                 <h3>NORMAL BAT ENCOUNTER</h3>
                 <p>
                   You face a normal bat.
                 </p>
-                <button onClick={handleExitEncounter}>Continue</button>
+                <button 
+                  onClick={handleExitEncounter} 
+                  disabled={isProcessing}
+                  style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
+                >
+                  {isProcessing ? "Processing..." : "Continue"}
+                </button>
               </div>
             )}
+            {/* BAT2 */}
             {encounter === "bat2" && (
               <div className="UI">
                 <h3>STRONG BAT ENCOUNTER</h3>
                 <p>
                   You face a strong bat.
                 </p>
-                <button onClick={handleExitEncounter}>Continue</button>
+                <button 
+                  onClick={handleExitEncounter} 
+                  disabled={isProcessing}
+                  style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
+                >
+                  {isProcessing ? "Processing..." : "Continue"}
+                </button>
               </div>
             )}
+            {/* CROSSROADS */}
             {encounter === "crossroads" && (
               <div className="UI">
                 <h3>CROSSROADS</h3>
                 <p>
                   You reached a fork in the road.
-                  The left road continues on the void.
-                  At the end of the right road, you see a glistening blue.
                 </p>
-                <button onClick={handleExitEncounter}>Continue</button>
+                {crossroadsChoices && (
+                  <div set={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                    <button 
+                      onClick={() => handlePlayerChoice(crossroadsChoices[0])} 
+                      disabled={isProcessing}
+                      style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
+                    >
+                      {isProcessing ? "Processing..." : "Go Left"}
+                    </button>
+                    <button 
+                      onClick={() => handlePlayerChoice(crossroadsChoices[1])} 
+                      disabled={isProcessing}
+                      style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
+                    >
+                      {isProcessing ? "Processing..." : "Go Right"}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
+            {/* AETHERCREST */}
             {encounter === "aethercrest" && (
               <div className="UI">
                 <h3>AETHERCREST</h3>
                 <p>
                   Aethercrest obtained.
                 </p>
-                <button
-                  onClick={() => {
-                    setTimeout(() => {
-                      dungeonRef.current.regenerateEncounters();
-                      handleExitEncounter();
-                    }, 500);
-                  }}
+                <button 
+                  onClick={handleAethercrest} 
+                  disabled={isProcessing}
+                  style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
                 >
-                  Continue
+                  {isProcessing ? "Processing..." : "Continue"}
                 </button>
               </div>
             )}
