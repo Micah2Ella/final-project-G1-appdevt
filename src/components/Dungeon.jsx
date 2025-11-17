@@ -16,23 +16,34 @@ const Dungeon = forwardRef(({ onEncounter, player, onCrossroadsChoice }, ref) =>
     const lockedVisibleRef = useRef([]);
 
     // modify for testing
-    const speed = 100;
+    const speed = 5;
 
     const generateEncounters = (cycle = 1) => {
         // modify for testing
         const encounterPool = [
             {type: "fountain", weight: 0.15}, // default: 0.15 
-            {type: "bat1", weight: 0.65}, // default: 0.65
+            {type: "bat1", weight: 0.55}, // default: 0.55
             {type: "bat2", weight: 0.10}, // default: 0.10
-            {type: "crossroads", weight: 0.10}, // default: 0.10
+            {type: "crossroads", weight: 0.20}, // default: 0.20
         ];
+
+        let placedFountain = false;
 
         const weightedRandom = () => {
             const r = Math.random();
             let acc = 0;
-            for (const e of encounterPool) {
+
+            // prevent fountain from being placed more than once per generation
+            const availablePool = placedFountain
+                ? encounterPool.filter(e => e.type !== "fountain")
+                : encounterPool;
+
+            const totalWeight = availablePool.reduce((sum, e) => sum + e.weight, 0);
+            const normalizedRandom = r * totalWeight;
+
+            for (const e of availablePool) {
                 acc += e.weight;
-                if (r <= acc) return e.type;
+                if (normalizedRandom <= acc) return e.type;
             }
             return "bat1";
         };
@@ -69,6 +80,7 @@ const Dungeon = forwardRef(({ onEncounter, player, onCrossroadsChoice }, ref) =>
             }
             
             if (type == "crossroads") placedCrossroads = true;
+            if (type == "fountain") placedFountain = true;
 
             list.push({ position: pos, type, triggered: false });
         }
@@ -159,7 +171,7 @@ const Dungeon = forwardRef(({ onEncounter, player, onCrossroadsChoice }, ref) =>
                         console.log("Encounter triggered:", e.type, "at position:", triggerX);
                         
                         // If crossroads, show available choices
-                        if (e.type === "crossroads") {
+                        if (e.type === "crossroads" && onCrossroadsChoice) {
                             const index = encounters.current.indexOf(e);
                             const next = encounters.current[index + 1];
 
@@ -190,7 +202,7 @@ const Dungeon = forwardRef(({ onEncounter, player, onCrossroadsChoice }, ref) =>
         // requestAnimationFrame(loop);
         loop();
         return () => cancelAnimationFrame(frameId);
-    }, [isPaused, onEncounter]);
+    }, [isPaused, onEncounter, onCrossroadsChoice]);
 
     useEffect(() => {
         let resizeTimeout;
@@ -241,6 +253,8 @@ const Dungeon = forwardRef(({ onEncounter, player, onCrossroadsChoice }, ref) =>
                 <Encounters key={index} type={e.type} x={e.x} />
             ))}
 
+            {/* add <Player />, <Enemy />, <UI />, etc. */}
+
             {/* Player fixed on screen */}
             <Player isPaused={isPaused} player={player}/>
 
@@ -249,8 +263,6 @@ const Dungeon = forwardRef(({ onEncounter, player, onCrossroadsChoice }, ref) =>
                 encounters={encounters.current}
                 playerPos={offsetRef.current}
             />
-
-            {/* Later: add <Player />, <Enemy />, <UI />, etc. */}
         </div>
     );
 });
