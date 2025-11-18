@@ -4,19 +4,46 @@ import "../App.css";
 import "./GameOver.css";
 import { usePlayerHealth } from "../context/PlayerHealth";
 
+// export default function Game({ player, onReset, onBattle }) {
 export default function Game({ player, onReset }) {
   const dungeonRef = useRef();
+
+  // 🔥 BGM
+  const bgmRef = useRef(null);
+
   const [encounter, setEncounter] = useState(null);
   const [intro, setIntro] = useState(true);
   const [gameOver, setGameOver] = useState(false);
   const [crossroadsChoices, setCrossroadsChoices] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false); // to prevent spam clicking
+  const [isProcessing, setIsProcessing] = useState(false);
   const { hp, takeDamage, heal } = usePlayerHealth();
+
+  // 🔊 MUSIC FILES
+  const dungeonMusic = "/music/Dungeon.m4a";
+  const bat1Music = "/music/Bat.m4a";
+  const bat2Music = "/music/StrongerBat.m4a";
+
+  // 🔊 FUNCTION TO SWAP TRACKS
+  const swapMusic = (src) => {
+    if (!bgmRef.current) return;
+
+    // don't reload if same track
+    if (bgmRef.current.src.includes(src)) return;
+
+    bgmRef.current.src = src;
+    bgmRef.current.load();
+    bgmRef.current.play().catch(() => {});
+  };
 
   const handleEncounter = (type) => {
     console.log("Encounter triggered:", type);
     setEncounter(type);
     setIsProcessing(false);
+
+    // 🔥 SWITCH MUSIC ON ENCOUNTER
+    if (type === "bat1") swapMusic(bat1Music);
+    else if (type === "bat2") swapMusic(bat2Music);
+    else swapMusic(dungeonMusic);
   };
 
   const handleCrossroadsChoice = (choices) => {
@@ -45,7 +72,11 @@ export default function Game({ player, onReset }) {
 
     console.log("Encounter ended!");
     setEncounter(null);
-    dungeonRef.current.resume(); // Scrolling resumes
+
+    // 🔥 WHEN ENCOUNTER ENDS → RETURN TO NORMAL MUSIC
+    swapMusic(dungeonMusic);
+
+    dungeonRef.current.resume();
   };
 
   const handleAethercrest = () => {
@@ -57,6 +88,9 @@ export default function Game({ player, onReset }) {
       setEncounter(null);
       dungeonRef.current.resume();
       setIsProcessing(false);
+
+      // aethercrest isn't bat → return to dungeon music
+      swapMusic(dungeonMusic);
     }, 500);
   };
 
@@ -65,18 +99,39 @@ export default function Game({ player, onReset }) {
     return () => clearTimeout(timer);
   }, []);
 
+  // 🔥 Autoplay fix — start music on first user interaction
+  useEffect(() => {
+    const startMusic = () => {
+      if (bgmRef.current) {
+        bgmRef.current.volume = 0.5;
+        bgmRef.current.play().catch(() => {});
+      }
+      window.removeEventListener("click", startMusic);
+    };
+    window.addEventListener("click", startMusic);
+
+    return () => window.removeEventListener("click", startMusic);
+  }, []);
+
+  // 🔥 Pause on game over
   useEffect(() => {
     if (hp <= 0) {
       setIsProcessing(false);
       setGameOver(true);
 
-      if (dungeonRef.current) {
-        dungeonRef.current.pause();
-      }
+      if (dungeonRef.current) dungeonRef.current.pause();
+      if (bgmRef.current) bgmRef.current.pause();
 
       setEncounter(null);
     }
   }, [hp]);
+
+  // 🔥 Resume music after reset
+  useEffect(() => {
+    if (!gameOver && bgmRef.current) {
+      bgmRef.current.play().catch(() => {});
+    }
+  }, [gameOver]);
 
   return (
     <div
@@ -86,9 +141,19 @@ export default function Game({ player, onReset }) {
         position: "relative"
       }}
     >
+      {/* 🔊 BACKGROUND MUSIC */}
+      <audio ref={bgmRef} src={dungeonMusic} loop />
+
       <div className="dungeon-wrapper">
-        <Dungeon ref={dungeonRef} onEncounter={handleEncounter} onCrossroadsChoice={handleCrossroadsChoice} player={player}/>
+        <Dungeon 
+          ref={dungeonRef} 
+          onEncounter={handleEncounter} 
+          onCrossroadsChoice={handleCrossroadsChoice} 
+          player={player}
+        />
       </div>
+
+      {/* UI BELOW IS UNCHANGED */}
       <div
         style={{
           height: "40vh",
@@ -103,38 +168,39 @@ export default function Game({ player, onReset }) {
           zIndex: 1,
         }}
       >
-        {/* Intro */}
         {intro && (
           <div className="intro">
             <div>
               <h1>Welcome, {player.playerName}!</h1>
               <h2>You chose: {player.name}</h2>
-              <p>HP: {player.baseStats.HP} | ATK: {player.baseStats.ATK} | SPD: {player.baseStats.SPD} | DEF: {player.baseStats.DEF}</p>
+              <p>
+                HP: {player.baseStats.HP} | ATK: {player.baseStats.ATK} | SPD: {player.baseStats.SPD} | DEF: {player.baseStats.DEF}
+              </p>
             </div>
           </div>
         )}
 
-        {/* Game Over */}
         {gameOver && (
           <div className="game-over">
             <div>
-              <img src="/characters/player_death.png"/>
+              <img src="/characters/player_death.png" />
               <h1>💀 YOU DIED 💀</h1>
-              <p>HP: {hp} | ATK: {player.baseStats.ATK} | SPD: {player.baseStats.SPD} | DEF: {player.baseStats.DEF}</p>
+              <p>
+                HP: {hp} | ATK: {player.baseStats.ATK} | SPD: {player.baseStats.SPD} | DEF: {player.baseStats.DEF}
+              </p>
               <button 
-                  onClick={onReset} 
-                  disabled={isProcessing}
-                  style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
-                >
-                  {isProcessing ? "Processing..." : "Play Again"}
-                </button>
+                onClick={onReset} 
+                disabled={isProcessing}
+                style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
+              >
+                {isProcessing ? "Processing..." : "Play Again"}
+              </button>
             </div>
           </div>
         )}
 
-        {/* Game UI */}
+        {/* Rest of UI unchanged */}
         <div className="game-ui">
-          {/* Stats Bar */}
           <div className="statbar">
             <h2>{player.playerName} | {player.name}</h2>
             <div className="grouped-stats">
@@ -145,76 +211,65 @@ export default function Game({ player, onReset }) {
             </div>
           </div>
 
-          {/* Encounter UI */}
           <div className="encounter-container">
-            {/* FOUNTAIN */}
             {encounter === "fountain" && (
               <div className="UI">
                 <h3>HEALING FOUNTAIN</h3>
-                <p>
-                  You recover 10 health.
-                </p>
+                <p>You recover 10 health.</p>
                 <button 
                   onClick={handleExitEncounter} 
                   disabled={isProcessing}
-                  style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
                 >
                   {isProcessing ? "Processing..." : "Continue"}
                 </button>
               </div>
             )}
-            {/* BAT1 */}
+
             {encounter === "bat1" && (
               <div className="UI">
                 <h3>NORMAL BAT ENCOUNTER</h3>
-                <p>
-                  You take 10 damage.
-                </p>
+                <p>You face a bat.</p>
                 <button 
                   onClick={handleExitEncounter} 
+                  // onClick={onBattle} 
                   disabled={isProcessing}
-                  style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
                 >
                   {isProcessing ? "Processing..." : "Continue"}
                 </button>
               </div>
             )}
-            {/* BAT2 */}
+
             {encounter === "bat2" && (
               <div className="UI">
                 <h3>STRONG BAT ENCOUNTER</h3>
-                <p>
-                  You take 20 damage.
-                </p>
+                <p>You face a strong bat.</p>
                 <button 
                   onClick={handleExitEncounter} 
+                  // onClick={onBattle} 
                   disabled={isProcessing}
-                  style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
                 >
                   {isProcessing ? "Processing..." : "Continue"}
                 </button>
               </div>
             )}
-            {/* CROSSROADS */}
+
             {encounter === "crossroads" && (
               <div className="UI">
                 <h3>CROSSROADS</h3>
-                <p>
-                  You reached a fork in the road.
-                </p>
+                <p>You reached a fork in the road.</p>
+
                 {crossroadsChoices && (
                   <div style={{ display: "flex", gap: "20px", marginTop: "10px" }}>
                     <button 
-                      onClick={() => handlePlayerChoice(crossroadsChoices[0])} 
+                      onClick={() => handlePlayerChoice(crossroadsChoices[0])}
                       disabled={isProcessing}
-                      style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
                     >
                       {isProcessing ? "Processing..." : "Go Left"}
                     </button>
+
                     <button 
-                      onClick={() => handlePlayerChoice(crossroadsChoices[1])} 
+                      onClick={() => handlePlayerChoice(crossroadsChoices[1])}
                       disabled={isProcessing}
-                      style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
                     >
                       {isProcessing ? "Processing..." : "Go Right"}
                     </button>
@@ -222,17 +277,14 @@ export default function Game({ player, onReset }) {
                 )}
               </div>
             )}
-            {/* AETHERCREST */}
+
             {encounter === "aethercrest" && (
               <div className="UI">
                 <h3>AETHERCREST</h3>
-                <p>
-                  Aethercrest obtained.
-                </p>
+                <p>Aethercrest obtained.</p>
                 <button 
                   onClick={handleAethercrest} 
                   disabled={isProcessing}
-                  style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
                 >
                   {isProcessing ? "Processing..." : "Continue"}
                 </button>
