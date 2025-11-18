@@ -16,15 +16,15 @@ const Dungeon = forwardRef(({ onEncounter, player, onCrossroadsChoice }, ref) =>
     const lockedVisibleRef = useRef([]);
 
     // modify for testing
-    const speed = 5;
+    const speed = 5; // default: 5
 
     const generateEncounters = (cycle = 1) => {
         // modify for testing
         const encounterPool = [
-            {type: "fountain", weight: 0.15}, // default: 0.15 
-            {type: "bat1", weight: 0.55}, // default: 0.55
+            {type: "fountain", weight: 0.20}, // default: 0.20 
+            {type: "bat1", weight: 0.40}, // default: 0.40
             {type: "bat2", weight: 0.10}, // default: 0.10
-            {type: "crossroads", weight: 0.20}, // default: 0.20
+            {type: "crossroads", weight: 0.30}, // default: 0.30
         ];
 
         let placedFountain = false;
