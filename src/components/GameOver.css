@@ -17,6 +17,5 @@
 @keyframes fadeIn {
   to {
     opacity: 100;
-    pointer-events: none;
   }
 }
