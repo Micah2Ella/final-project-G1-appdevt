@@ -3,6 +3,8 @@ import TitleScreen from "./components/TitleScreen";
 import CharacterSelect from "./components/CharacterSelect";
 import Game from "./components/Game"; // make sure you create this file
 import "./App.css"; // fade styles here
+import { PlayerHealthProvider } from "./context/PlayerHealth";
+import { BrowserRouter } from "react-router-dom";
 
 export default function App() {
   const [screen, setScreen] = useState("title");
@@ -26,13 +28,26 @@ export default function App() {
     }, 600);
   };
 
+  const handleReset = () => {
+    setFade(true);
+    setTimeout(() => {
+      setPlayerData(null);
+      setScreen("characterSelect");
+      setFade(false);
+    }, 600);
+  }
+
   return (
-    <div className={`fade-wrapper ${fade ? "fade-out" : "fade-in"}`}>
+    <BrowserRouter>
+      <div className={`fade-wrapper ${fade ? "fade-out" : "fade-in"}`}>
       {screen === "title" && <TitleScreen onStart={handleStart} />}
       {screen === "characterSelect" && (
         <CharacterSelect onSelect={handleCharacterSelect} />
       )}
-      {screen === "gameplay" && <Game player={playerData} />}
+      <PlayerHealthProvider baseHP={playerData?.baseStats?.HP ?? 100}>
+        {screen === "gameplay" && <Game player={playerData} onReset={handleReset} />}
+      </PlayerHealthProvider>
     </div>
+    </BrowserRouter>
   );
 }

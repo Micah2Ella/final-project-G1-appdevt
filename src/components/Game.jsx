@@ -1,13 +1,17 @@
 import { useRef, useState, useEffect } from "react";
 import Dungeon from "./Dungeon";
 import "../App.css";
+import "./GameOver.css";
+import { usePlayerHealth } from "../context/PlayerHealth";
 
-export default function Game({ player }) {
+export default function Game({ player, onReset }) {
   const dungeonRef = useRef();
   const [encounter, setEncounter] = useState(null);
   const [intro, setIntro] = useState(true);
+  const [gameOver, setGameOver] = useState(false);
   const [crossroadsChoices, setCrossroadsChoices] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false); // to prevent spam clicking
+  const { hp, takeDamage, heal } = usePlayerHealth();
 
   const handleEncounter = (type) => {
     console.log("Encounter triggered:", type);
@@ -34,6 +38,11 @@ export default function Game({ player }) {
     if (isProcessing) return;
 
     setIsProcessing(true);
+
+    if (encounter === "fountain") heal(10);
+    if (encounter === "bat1") takeDamage(10);
+    if (encounter === "bat2") takeDamage(20);
+
     console.log("Encounter ended!");
     setEncounter(null);
     dungeonRef.current.resume(); // Scrolling resumes
@@ -55,6 +64,19 @@ export default function Game({ player }) {
     const timer = setTimeout(() => setIntro(false), 3000);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (hp <= 0) {
+      setIsProcessing(false);
+      setGameOver(true);
+
+      if (dungeonRef.current) {
+        dungeonRef.current.pause();
+      }
+
+      setEncounter(null);
+    }
+  }, [hp]);
 
   return (
     <div
@@ -92,13 +114,31 @@ export default function Game({ player }) {
           </div>
         )}
 
+        {/* Game Over */}
+        {gameOver && (
+          <div className="game-over">
+            <div>
+              <img src="/characters/player_death.png"/>
+              <h1>💀 YOU DIED 💀</h1>
+              <p>HP: {hp} | ATK: {player.baseStats.ATK} | SPD: {player.baseStats.SPD} | DEF: {player.baseStats.DEF}</p>
+              <button 
+                  onClick={onReset} 
+                  disabled={isProcessing}
+                  style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
+                >
+                  {isProcessing ? "Processing..." : "Play Again"}
+                </button>
+            </div>
+          </div>
+        )}
+
         {/* Game UI */}
         <div className="game-ui">
           {/* Stats Bar */}
           <div className="statbar">
-            <h2>{player.playerName} || {player.name}</h2>
+            <h2>{player.playerName} | {player.name}</h2>
             <div className="grouped-stats">
-              <h2>♥️{player.baseStats.HP}</h2>
+              <h2>♥️{hp}</h2>
               <h2>🗡️{player.baseStats.ATK}</h2>
               <h2>👟{player.baseStats.SPD}</h2>
               <h2>🛡️{player.baseStats.DEF}</h2>
@@ -128,7 +168,7 @@ export default function Game({ player }) {
               <div className="UI">
                 <h3>NORMAL BAT ENCOUNTER</h3>
                 <p>
-                  You face a normal bat.
+                  You take 10 damage.
                 </p>
                 <button 
                   onClick={handleExitEncounter} 
@@ -144,7 +184,7 @@ export default function Game({ player }) {
               <div className="UI">
                 <h3>STRONG BAT ENCOUNTER</h3>
                 <p>
-                  You face a strong bat.
+                  You take 20 damage.
                 </p>
                 <button 
                   onClick={handleExitEncounter} 
@@ -163,7 +203,7 @@ export default function Game({ player }) {
                   You reached a fork in the road.
                 </p>
                 {crossroadsChoices && (
-                  <div set={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                  <div style={{ display: "flex", gap: "20px", marginTop: "10px" }}>
                     <button 
                       onClick={() => handlePlayerChoice(crossroadsChoices[0])} 
                       disabled={isProcessing}
