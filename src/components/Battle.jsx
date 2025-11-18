@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { usePlayerHealth } from '../context/PlayerHealth';
 
 // Define canvas constants outside the component so they don't change on re-render
 const CANVAS_WIDTH = 800;
@@ -20,10 +21,22 @@ const initialPlayer = {
   maxHp: MAX_HP,
 };
 
+// export default function BulletHellGame({player}) {
 export default function BulletHellGame() {
   const [player, setPlayer] = useState(initialPlayer);
   const [bullets, setBullets] = useState([]);
   const [keys, setKeys] = useState({});
+  // const { hp, takeDamage, heal } = usePlayerHealth();
+  // const MAX_HP = hp;
+
+  // const initialPlayer = {
+  //   x: CANVAS_WIDTH / 2,
+  //   y: CANVAS_HEIGHT - 100,
+  //   size: PLAYER_SIZE,
+  //   speed: 5,
+  //   hp: MAX_HP,
+  //   maxHp: MAX_HP,
+  // };
 
   // Refs for DOM elements and game loop IDs
   const canvasRef = useRef(null);

@@ -2,6 +2,7 @@ import { useState } from "react";
 import TitleScreen from "./components/TitleScreen";
 import CharacterSelect from "./components/CharacterSelect";
 import Game from "./components/Game"; // make sure you create this file
+import Battle from "./components/Battle"; // make sure you create this file
 import "./App.css"; // fade styles here
 import { PlayerHealthProvider } from "./context/PlayerHealth";
 import { BrowserRouter } from "react-router-dom";
@@ -37,6 +38,14 @@ export default function App() {
     }, 600);
   }
 
+  const handleBattle = () => {
+    setFade(true);
+    setTimeout(() => {
+      setScreen("battle");
+      setFade(false);
+    }, 600)
+  }
+
   return (
     <BrowserRouter>
       <div className={`fade-wrapper ${fade ? "fade-out" : "fade-in"}`}>
@@ -45,7 +54,8 @@ export default function App() {
         <CharacterSelect onSelect={handleCharacterSelect} />
       )}
       <PlayerHealthProvider baseHP={playerData?.baseStats?.HP ?? 100}>
-        {screen === "gameplay" && <Game player={playerData} onReset={handleReset} />}
+        {screen === "gameplay" && <Game player={playerData} onReset={handleReset} onBattle={handleBattle} />}
+        {/* {screen === "battle" && <Battle player={playerData} />} */}
       </PlayerHealthProvider>
     </div>
     </BrowserRouter>
