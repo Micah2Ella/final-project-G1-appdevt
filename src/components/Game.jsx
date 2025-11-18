@@ -300,11 +300,11 @@ export default function Game({ player, onReset }) {
                 <h3>AETHERCREST</h3>
                 <p>Aethercrest obtained. Choose one upgrade:</p>
 
-                {/* <div className="upgrade-buttons">
-                  <button onClick={() => handleUpgrade("ATK")}>+5 ATK</button>
-                  <button onClick={() => handleUpgrade("SPD")}>+5 SPD</button>
-                  <button onClick={() => handleUpgrade("DEF")}>+5 DEF</button>
-                </div> */}
+                <div className="upgrade-buttons">
+                  <button onClick={() => handleUpgrade("ATK")}>+5 🗡️</button>
+                  <button onClick={() => handleUpgrade("SPD")}>+5 👟</button>
+                  <button onClick={() => handleUpgrade("DEF")}>+5 🛡️</button>
+                </div>
                 <button 
                   onClick={handleAethercrest} 
                   disabled={isProcessing}
