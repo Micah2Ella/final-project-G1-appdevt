@@ -1,7 +1,6 @@
 html, body {
   margin: 0;
   padding: 0;
-  overflow: hidden;
   height: 100%;
   background-color: black;
   cursor: url("/cursor/Arrow2.png"), auto;
@@ -23,6 +22,15 @@ a:hover, button:hover {
   opacity: 0;
 }
 
+.dungeon-wrapper {
+  width: 100vw;
+  height: 60vh;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  border-bottom: 4px solid white;
+}
+
 .dungeon {
   width: 100vw;
   height: 60vh;
@@ -35,7 +43,6 @@ a:hover, button:hover {
   top: 0;
   left: 0;
   z-index: 0;
-  border-bottom: 2px solid white;
 }
 
 .intro {
@@ -62,33 +69,121 @@ a:hover, button:hover {
   }
 }
 
+button {
+  background: #304d6d;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.2s ease;
+}
+
+button:hover {
+  background: #4c6f94ff;
+  transform: scale(1.05);
+}
+
+.game-ui {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr 6fr;
+  align-items: center;
+  justify-content: center;
+}
+
+.statbar, .encounter-container, .node-bar {
+  pointer-events: auto;
+}
+
 .UI {
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   text-align: center;
-  font-size: larger;
-  margin-top: -10%;
+  padding: 15px;
+}
+
+.encounter-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.node-bar {
+  position: fixed;
+  left: 50%;
+  top: 2%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 2px solid white;
+  z-index: 6;
+}
+
+.node-icon {
+  width: 45px;
+  height: 48px;
+  image-rendering: pixelated;
+  transition: 
+    transform 0.25 ease,
+    opacity 0.25 ease,
+    filter 0.2 ease;
+}
+
+.node-icon:hover {
+  transform: scale(1.1) !important;
+  filter: drop-shadow(0 0 6px rgb(255, 165, 165));
+}
+
+.you-marker {
+  display: flex;
+  flex-direction: column;
+  margin: 10px 12px;
+}
+
+.you-dot {
+  width: 12px;
+  height: 12px;
+  background: #00eaff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #00eaff, 0 0 12px #00eaff;
+  animation: bob 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes bob {
+    from { transform: translateY(0); }
+    to   { transform: translateY(4px); }
+}
+
+.you-text {
+    margin-top: 4px;
+    margin-left: -6px;
+    font-size: 11px;
+    font-weight: bold;
+    color: white;
+    opacity: 0.9;
+    line-height: 1;
+    animation: bob 1.1s ease-in-out infinite alternate;
 }
 
 .statbar {
-  position: fixed;
-  display: grid;
-  grid-template-columns: 1fr 1fr 2fr;
-  background-color: black;
-  left: 0;
-  bottom: 0;
-  padding: 1% 0;
-  border-top: 2px solid white;
-  width: 100%;
-  z-index: 5;
-  align-items: center;
-  justify-items: center;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  padding: 0px 15px;
+  border-right: 4px solid white;
+  background: rgba(0, 0, 0, 0.8);
 }
 
 .grouped-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1vw;
-  justify-items: center;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes figureMovement {
