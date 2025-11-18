@@ -1,9 +1,9 @@
 import { useState } from "react";
 import TitleScreen from "./components/TitleScreen";
 import CharacterSelect from "./components/CharacterSelect";
-import Game from "./components/Game"; // make sure you create this file
-import Battle from "./components/Battle"; // make sure you create this file
-import "./App.css"; // fade styles here
+import Game from "./components/Game";
+import Controls from "./components/Controls";   // ← ADD THIS
+import "./App.css";
 import { PlayerHealthProvider } from "./context/PlayerHealth";
 import { BrowserRouter } from "react-router-dom";
 
@@ -20,11 +20,19 @@ export default function App() {
     }, 600);
   };
 
-  const handleCharacterSelect = (character) => {
-    setPlayerData(character); // store selected character + player name
+  const handleControls = () => {
     setFade(true);
     setTimeout(() => {
-      setScreen("gameplay"); // move to gameplay
+      setScreen("controls");
+      setFade(false);
+    }, 600);
+  };
+
+  const handleCharacterSelect = (character) => {
+    setPlayerData(character);
+    setFade(true);
+    setTimeout(() => {
+      setScreen("gameplay");
       setFade(false);
     }, 600);
   };
@@ -36,28 +44,33 @@ export default function App() {
       setScreen("characterSelect");
       setFade(false);
     }, 600);
-  }
-
-  const handleBattle = () => {
-    setFade(true);
-    setTimeout(() => {
-      setScreen("battle");
-      setFade(false);
-    }, 600)
-  }
+  };
 
   return (
     <BrowserRouter>
       <div className={`fade-wrapper ${fade ? "fade-out" : "fade-in"}`}>
-      {screen === "title" && <TitleScreen onStart={handleStart} />}
-      {screen === "characterSelect" && (
-        <CharacterSelect onSelect={handleCharacterSelect} />
-      )}
-      <PlayerHealthProvider baseHP={playerData?.baseStats?.HP ?? 100}>
-        {screen === "gameplay" && <Game player={playerData} onReset={handleReset} onBattle={handleBattle} />}
-        {/* {screen === "battle" && <Battle player={playerData} />} */}
-      </PlayerHealthProvider>
-    </div>
+
+        {screen === "title" && (
+          <TitleScreen 
+            onStart={handleStart} 
+            onControls={handleControls}   // ⭐ NEW
+          />
+        )}
+
+        {screen === "controls" && (
+          <Controls onBack={() => setScreen("title")} />  
+        )}
+
+        {screen === "characterSelect" && (
+          <CharacterSelect onSelect={handleCharacterSelect} />
+        )}
+
+        <PlayerHealthProvider baseHP={playerData?.baseStats?.HP ?? 100}>
+          {screen === "gameplay" && (
+            <Game player={playerData} onReset={handleReset} />
+          )}
+        </PlayerHealthProvider>
+      </div>
     </BrowserRouter>
   );
 }
