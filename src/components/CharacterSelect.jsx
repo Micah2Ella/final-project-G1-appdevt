@@ -5,6 +5,8 @@ export default function CharacterSelect({ onSelect }) {
   const [playerName, setPlayerName] = useState("");
   const [shake, setShake] = useState(false);
 
+  const MAX_CHAR_LIMIT = 7; // Define the maximum character limit
+
   const characters = [
     {
       name: "Barbarian",
@@ -22,7 +24,25 @@ export default function CharacterSelect({ onSelect }) {
 
   const handleSelect = (char) => setSelectedChar(char);
 
+  const handleNameChange = (e) => {
+    const rawNewName = e.target.value;
+    
+    // 1. Enforce the 7-character limit and trigger shake
+    if (rawNewName.length > MAX_CHAR_LIMIT) {
+      setShake(true);
+      setTimeout(() => setShake(false), 400);
+      return; // Stop processing and don't update the state
+    }
+
+    // 2. Convert the input to uppercase for that retro style
+    const capitalizedName = rawNewName.toUpperCase();
+
+    // 3. Update the state with the capitalized name
+    setPlayerName(capitalizedName);
+  };
+
   const handleConfirm = () => {
+    // Check for empty name before confirming
     if (playerName.trim() === "") {
       setShake(true);
       setTimeout(() => setShake(false), 400);
@@ -75,12 +95,15 @@ export default function CharacterSelect({ onSelect }) {
         <div className="popup">
           <div className={`popup-content ${shake ? "shake" : ""}`}>
             <h2>{selectedChar.name}</h2>
-            <p>Enter your name, brave adventurer:</p>
+            <p>
+              Enter your name, brave adventurer (Max: {MAX_CHAR_LIMIT} chars):
+            </p>
             <input
               type="text"
               value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              placeholder="Your Name"
+              onChange={handleNameChange} // Using the updated handler
+              placeholder="YOUR NAME"
+              maxLength={MAX_CHAR_LIMIT} 
             />
             <div className="popup-buttons">
               <button onClick={handleConfirm}>Confirm</button>
@@ -98,9 +121,12 @@ export default function CharacterSelect({ onSelect }) {
           flex-direction: column;
           justify-content: center;
           align-items: center;
-          background: radial-gradient(circle at center, #141414, #000);
+          background-image: url("/background/CharSelectBG.png");
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
           color: white;
-          font-family: "Poppins", sans-serif;
+          font-family: "Retro Gaming";
           position: relative;
         }
 
@@ -126,6 +152,10 @@ export default function CharacterSelect({ onSelect }) {
           display: flex;
           justify-content: center;
           align-items: center;
+        }
+
+        .character-card:hover {
+          cursor: url("/cursor/Hand3.png"), pointer;
         }
 
         .char-image-wrapper {
@@ -225,6 +255,7 @@ export default function CharacterSelect({ onSelect }) {
           text-align: center;
           border: 2px solid #304d6d;
           transition: transform 0.2s ease;
+          font-family: "Retro Gaming";
         }
 
         .popup-content h2 {
@@ -240,6 +271,7 @@ export default function CharacterSelect({ onSelect }) {
           border: none;
           width: 80%;
           text-align: center;
+          font-family: "Retro Gaming";
         }
 
         .popup-buttons {
@@ -257,6 +289,7 @@ export default function CharacterSelect({ onSelect }) {
           cursor: pointer;
           font-weight: bold;
           transition: 0.2s ease;
+          font-family: "Retro Gaming";
         }
 
         .popup-buttons button:hover {
