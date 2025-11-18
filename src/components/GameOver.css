@@ -1,0 +1,21 @@
+.game-over {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    text-align: center;
+    animation: fadeIn 1s ease 2.5s forwards;
+    background-color: black;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 100;
+  }
+}
