@@ -4,6 +4,7 @@ import "../App.css";
 import "./GameOver.css";
 import { usePlayerHealth } from "../context/PlayerHealth";
 
+// export default function Game({ player, onReset, onBattle }) {
 export default function Game({ player, onReset }) {
   const dungeonRef = useRef();
 
@@ -227,9 +228,10 @@ export default function Game({ player, onReset }) {
             {encounter === "bat1" && (
               <div className="UI">
                 <h3>NORMAL BAT ENCOUNTER</h3>
-                <p>You take 10 damage.</p>
+                <p>You face a bat.</p>
                 <button 
                   onClick={handleExitEncounter} 
+                  // onClick={onBattle} 
                   disabled={isProcessing}
                 >
                   {isProcessing ? "Processing..." : "Continue"}
@@ -240,9 +242,10 @@ export default function Game({ player, onReset }) {
             {encounter === "bat2" && (
               <div className="UI">
                 <h3>STRONG BAT ENCOUNTER</h3>
-                <p>You take 20 damage.</p>
+                <p>You face a strong bat.</p>
                 <button 
                   onClick={handleExitEncounter} 
+                  // onClick={onBattle} 
                   disabled={isProcessing}
                 >
                   {isProcessing ? "Processing..." : "Continue"}
