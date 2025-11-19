@@ -16,7 +16,7 @@ const Dungeon = forwardRef(({ onEncounter, player, onCrossroadsChoice }, ref) =>
     const lockedVisibleRef = useRef([]);
 
     // modify for testing
-    const speed = 50; // default: 4
+    const speed = 15; // default: 15
 
     const generateEncounters = (cycle = 1) => {
         // modify for testing
