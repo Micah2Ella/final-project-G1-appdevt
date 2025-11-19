@@ -5,7 +5,6 @@ import "./GameOver.css";
 import { usePlayerHealth } from "../context/PlayerHealth";
 import { usePlayerStats } from "../context/PlayerStats";
 
-// ⭐ FIXED: onBattle was missing!
 export default function Game({ player, onReset, onBattle }) {
   const dungeonRef = useRef();
   const { stats, upgrade } = usePlayerStats();
@@ -21,19 +20,15 @@ export default function Game({ player, onReset, onBattle }) {
   const { hp, takeDamage, heal } = usePlayerHealth();
   const [aethercrestCount, setAethercrestCount] = useState(0);
 
-  // 🔊 MUSIC FILES
+  // 🔊 ONLY ONE MUSIC FILE NOW
   const dungeonMusic = "/music/Dungeon.m4a";
-  const bat1Music = "/music/Bat.m4a";
-  const bat2Music = "/music/StrongerBat.m4a";
 
-  // 🔊 FUNCTION TO SWAP TRACKS
-  const swapMusic = (src) => {
+  // 🔊 ALWAYS PLAY DUNGEON MUSIC
+  const swapMusic = () => {
     if (!bgmRef.current) return;
+    if (bgmRef.current.src.includes(dungeonMusic)) return;
 
-    // don't reload if same track
-    if (bgmRef.current.src.includes(src)) return;
-
-    bgmRef.current.src = src;
+    bgmRef.current.src = dungeonMusic;
     bgmRef.current.load();
     bgmRef.current.play().catch(() => {});
   };
@@ -43,10 +38,8 @@ export default function Game({ player, onReset, onBattle }) {
     setEncounter(type);
     setIsProcessing(false);
 
-    // 🔥 SWITCH MUSIC ON ENCOUNTER
-    if (type === "bat1") swapMusic(bat1Music);
-    else if (type === "bat2") swapMusic(bat2Music);
-    else swapMusic(dungeonMusic);
+    // 🎵 ALWAYS keep dungeon music
+    swapMusic();
   };
 
   const handleCrossroadsChoice = (choices) => {
@@ -77,9 +70,7 @@ export default function Game({ player, onReset, onBattle }) {
     console.log("Encounter ended!");
     setEncounter(null);
 
-    // 🔥 WHEN ENCOUNTER ENDS → RETURN TO NORMAL MUSIC
-    swapMusic(dungeonMusic);
-
+    swapMusic(); // keep dungeon music
     dungeonRef.current.resume();
   };
 
@@ -97,7 +88,7 @@ export default function Game({ player, onReset, onBattle }) {
       dungeonRef.current.resume();
       setAethercrestCount((prev) => prev + 1);
       setIsProcessing(false);
-      swapMusic(dungeonMusic);
+      swapMusic();
     }, 300);
   };
 
@@ -133,9 +124,10 @@ export default function Game({ player, onReset, onBattle }) {
     }
   }, [hp]);
 
-  // 🔥 Resume music after reset
+  // 🔥 Resume dungeon music after reset
   useEffect(() => {
     if (!gameOver && bgmRef.current) {
+      swapMusic();
       bgmRef.current.play().catch(() => {});
     }
   }, [gameOver]);
@@ -192,7 +184,7 @@ export default function Game({ player, onReset, onBattle }) {
               <img src="/characters/player_death.png" />
               <h1>💀 YOU DIED 💀</h1>
               <p>
-                HP: {hp} | ATK: {stats.ATK} | SPD: {stats.SPD} | DEF: {stats.DEF}
+                HP: {hp} | ATK: {stats.ATATK} | SPD: {stats.SPD} | DEF: {stats.DEF}
               </p>
               <button
                 onClick={onReset}
@@ -233,14 +225,14 @@ export default function Game({ player, onReset, onBattle }) {
               </div>
             )}
 
-            {/* ⭐ FIXED: onBattle now works */}
+            {/* ⭐ Always dungeon music */}
             {encounter === "bat1" && (
               <div className="UI">
                 <h3>NORMAL BAT ENCOUNTER</h3>
                 <p>You face a bat.</p>
                 <button
                   onClick={() => {
-                    swapMusic(dungeonMusic);
+                    swapMusic();
                     onBattle("bat1");
                   }}
                   disabled={isProcessing}
@@ -256,7 +248,7 @@ export default function Game({ player, onReset, onBattle }) {
                 <p>You face a strong bat.</p>
                 <button
                   onClick={() => {
-                    swapMusic(dungeonMusic);
+                    swapMusic();
                     onBattle("bat2");
                   }}
                   disabled={isProcessing}
@@ -303,22 +295,13 @@ export default function Game({ player, onReset, onBattle }) {
                 <p>Aethercrest obtained. Choose one upgrade:</p>
 
                 <div className="upgrade-buttons">
-                  <button
-                    onClick={() => handleUpgrade("ATK")}
-                    disabled={isProcessing}
-                  >
+                  <button onClick={() => handleUpgrade("ATK")} disabled={isProcessing}>
                     {isProcessing ? "Processing..." : "+5 🗡️"}
                   </button>
-                  <button
-                    onClick={() => handleUpgrade("SPD")}
-                    disabled={isProcessing}
-                  >
+                  <button onClick={() => handleUpgrade("SPD")} disabled={isProcessing}>
                     {isProcessing ? "Processing..." : "+5 👟"}
                   </button>
-                  <button
-                    onClick={() => handleUpgrade("DEF")}
-                    disabled={isProcessing}
-                  >
+                  <button onClick={() => handleUpgrade("DEF")} disabled={isProcessing}>
                     {isProcessing ? "Processing..." : "+5 🛡️"}
                   </button>
                 </div>
