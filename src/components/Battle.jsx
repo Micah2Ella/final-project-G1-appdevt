@@ -9,6 +9,7 @@ export default function Battle({
   duration = 10000,
   bulletDamage = 5,
   defendActive = false,
+  playerClass = "",
   onEnd,
 }) {
   const canvasRef = useRef(null);
@@ -21,6 +22,10 @@ export default function Battle({
   });
 
   const [hp, setHp] = useState(MAX_HP);
+
+  // ⭐ ROGUE BULLET SPEED MODIFIER
+  const isRogue = playerClass.toLowerCase() === "rogue";
+  const bulletSpeedMultiplier = isRogue ? 0.6 : 1; // 40% slower for Rogues
 
   const updatePlayer = () => {
     const p = player.current;
@@ -35,7 +40,10 @@ export default function Battle({
 
   const spawnBullet = () => {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 2 + Math.random() * 2;
+
+    // ⭐ Rogue has slower bullets
+    const speed = (2 + Math.random() * 2) * bulletSpeedMultiplier;
+
     bullets.current.push({
       x: CANVAS_WIDTH / 2,
       y: CANVAS_HEIGHT / 3,
