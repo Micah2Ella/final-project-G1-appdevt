@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import Battle from "./Battle";
+import { usePlayerHealth } from "../context/PlayerHealth";
+
 
 export default function Combat({ player, enemyType, onExitCombat }) {
   const bgmRef = useRef(null);
-  const [playerHp, setPlayerHp] = useState(player.HP || 100);
+  const { hp: playerHp, takeDamage, heal } = usePlayerHealth();
   const [enemyHp, setEnemyHp] = useState(enemyType === "bat1" ? 200 : 300);
   const [phase, setPhase] = useState("playerTurn");
   const [showFightMenu, setShowFightMenu] = useState(false);
@@ -185,6 +187,7 @@ export default function Combat({ player, enemyType, onExitCombat }) {
           duration={10000}
           bulletDamage={bulletDamage}
           defendActive={defendNextRound}
+          playerClass={player.name} 
           onEnd={endBattleHell}
         />
       )}
