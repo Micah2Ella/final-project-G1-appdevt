@@ -11,8 +11,8 @@ export default function Encounters({ type, x }) {
         fountain: { img: fountainSprite, width: 268.5, height: 236.5, y: 50 },
         bat1: { img: bat1, width: 251, height: 132, y: 150 },
         bat2: { img: bat2, width: 342, height: 166, y: 150 },
-        crossroads: { img: crossroadSprite, width: 100, height: 308, y: 50 },
-        aethercrest: { img: aethercrestSprite, width: 54, height: 52, y: 100},
+        crossroads: { img: crossroadSprite, width: "auto", height: 308, y: 50 },
+        aethercrest: { img: aethercrestSprite, width: 87.5, height: 87, y: 100},
     };
 
     const { img, width, height, y } = encounterData[type] || {};
