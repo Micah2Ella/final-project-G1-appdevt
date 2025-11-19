@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
+import { usePlayerHealth } from "../context/PlayerHealth";
 
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
 const PLAYER_SIZE = 20;
-const MAX_HP = 50;
 
 export default function Battle({
   duration = 10000,
@@ -21,11 +21,16 @@ export default function Battle({
     speed: 2.5,
   });
 
-  const [hp, setHp] = useState(MAX_HP);
+  // ⭕ Read player HP ONCE only
+  const { hp: globalHp, takeDamage } = usePlayerHealth();
+  const startingHpRef = useRef(globalHp);
 
-  // ⭐ ROGUE BULLET SPEED MODIFIER
+  // ⭕ Local battle HP that does NOT reset global HP
+  const [tempHp, setTempHp] = useState(startingHpRef.current);
+
+  // ⭐ Rogue slower bullets
   const isRogue = playerClass.toLowerCase() === "rogue";
-  const bulletSpeedMultiplier = isRogue ? 0.6 : 1; // 40% slower for Rogues
+  const bulletSpeedMultiplier = isRogue ? 0.6 : 1;
 
   const updatePlayer = () => {
     const p = player.current;
@@ -40,8 +45,6 @@ export default function Battle({
 
   const spawnBullet = () => {
     const angle = Math.random() * Math.PI * 2;
-
-    // ⭐ Rogue has slower bullets
     const speed = (2 + Math.random() * 2) * bulletSpeedMultiplier;
 
     bullets.current.push({
@@ -63,9 +66,10 @@ export default function Battle({
 
       const dx = b.x - p.x;
       const dy = b.y - p.y;
+
       if (Math.sqrt(dx * dx + dy * dy) < b.size + PLAYER_SIZE) {
         const actualDamage = Math.floor(bulletDamage * dmgMultiplier);
-        setHp((h) => Math.max(h - actualDamage, 0));
+        setTempHp((h) => Math.max(h - actualDamage, 0));
         return false;
       }
 
@@ -81,11 +85,13 @@ export default function Battle({
   const draw = (ctx) => {
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+    // Player
     ctx.fillStyle = "yellow";
     ctx.beginPath();
     ctx.arc(player.current.x, player.current.y, PLAYER_SIZE, 0, Math.PI * 2);
     ctx.fill();
 
+    // Bullets
     ctx.fillStyle = "red";
     bullets.current.forEach((b) => {
       ctx.beginPath();
@@ -112,9 +118,14 @@ export default function Battle({
     requestAnimationFrame(loop);
     const interval = setInterval(spawnBullet, 120);
 
+    // ⭕ FINAL FIX: use startingHpRef, NEVER globalHp
     const timer = setTimeout(() => {
-      const damageTaken = MAX_HP - hp;
-      onEnd(damageTaken);
+      const damageTaken = startingHpRef.current - tempHp;
+
+      // Apply final real damage
+      takeDamage(Math.max(0, damageTaken));
+
+      onEnd(Math.max(0, damageTaken));
     }, duration);
 
     return () => {
@@ -123,9 +134,9 @@ export default function Battle({
       clearInterval(interval);
       clearTimeout(timer);
     };
-  }, []);
+  }, []); // NEVER restart
 
-  const hpPercent = (hp / MAX_HP) * 100;
+  const hpPercent = (tempHp / startingHpRef.current) * 100;
 
   return (
     <div
@@ -146,6 +157,7 @@ export default function Battle({
         style={{ border: "2px solid white", background: "#111" }}
       />
 
+      {/* HP BAR */}
       <div style={{ width: CANVAS_WIDTH, marginTop: 20, textAlign: "center" }}>
         <div
           style={{
@@ -155,7 +167,7 @@ export default function Battle({
             fontFamily: "Retro Gaming",
           }}
         >
-          HP {hp} / {MAX_HP}
+          HP {tempHp} / {startingHpRef.current}
         </div>
 
         <div

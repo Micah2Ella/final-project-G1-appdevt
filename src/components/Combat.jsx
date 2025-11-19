@@ -2,19 +2,25 @@ import React, { useState, useEffect, useRef } from "react";
 import Battle from "./Battle";
 import { usePlayerHealth } from "../context/PlayerHealth";
 
-
 export default function Combat({ player, enemyType, onExitCombat }) {
   const bgmRef = useRef(null);
-  const { hp: playerHp, takeDamage, heal } = usePlayerHealth();
+
+  // 🌟 REAL HP SYSTEM FROM CONTEXT
+  const { hp: playerHp, takeDamage } = usePlayerHealth();
+
   const [enemyHp, setEnemyHp] = useState(enemyType === "bat1" ? 200 : 300);
   const [phase, setPhase] = useState("playerTurn");
   const [showFightMenu, setShowFightMenu] = useState(false);
   const [showHitEffect, setShowHitEffect] = useState(false);
   const [defendNextRound, setDefendNextRound] = useState(false);
 
+  // ⭐ Battle Instance Key so React does NOT remount Battle repeatedly
+  const [battleKey, setBattleKey] = useState(0);
+
   // 🎵 Music
   const bat1Music = "/music/Bat.m4a";
   const bat2Music = "/music/StrongerBat.m4a";
+
   useEffect(() => {
     const src = enemyType === "bat1" ? bat1Music : bat2Music;
     if (bgmRef.current) {
@@ -23,31 +29,35 @@ export default function Combat({ player, enemyType, onExitCombat }) {
       bgmRef.current.play().catch(() => {});
     }
   }, [enemyType]);
-  const stopMusic = () => bgmRef.current && bgmRef.current.pause();
+
+  const stopMusic = () => {
+    if (bgmRef.current) bgmRef.current.pause();
+  };
 
   // 🪓 Attack Logic
   const performAttack = (type) => {
     let dmg = 0;
     const atk = player.baseStats?.ATK || 30;
+
     if (type === "normal") dmg = Math.floor(atk / 2);
     else if (type === "strong" && Math.random() < 0.5) dmg = atk;
 
     if (dmg > 0) {
       setShowHitEffect(true);
+
       setTimeout(() => {
         setShowHitEffect(false);
         setEnemyHp((hp) => Math.max(hp - dmg, 0));
         setShowFightMenu(false);
-        setPhase("enemyPhase");
         startBattleHell();
       }, 850);
     } else {
       setShowFightMenu(false);
-      setPhase("enemyPhase");
       startBattleHell();
     }
   };
 
+  // 🩸 Enemy dies
   useEffect(() => {
     if (enemyHp <= 0) {
       stopMusic();
@@ -55,6 +65,7 @@ export default function Combat({ player, enemyType, onExitCombat }) {
     }
   }, [enemyHp]);
 
+  // 💀 Player dies
   useEffect(() => {
     if (playerHp <= 0) {
       stopMusic();
@@ -63,10 +74,17 @@ export default function Combat({ player, enemyType, onExitCombat }) {
     }
   }, [playerHp]);
 
-  const startBattleHell = () => setPhase("bulletHell");
+  const startBattleHell = () => {
+    // Move to bullet hell
+    setPhase("bulletHell");
 
+    // Generate a NEW key so Battle mounts ONCE
+    setBattleKey((prev) => prev + 1);
+  };
+
+  // 🟦 Battle ends → apply real damage + return to player turn
   const endBattleHell = (damageTaken) => {
-    setPlayerHp((hp) => Math.max(hp - damageTaken, 0));
+    takeDamage(damageTaken); // use real HP system
     setDefendNextRound(false);
     setPhase("playerTurn");
   };
@@ -88,13 +106,17 @@ export default function Combat({ player, enemyType, onExitCombat }) {
     >
       <audio ref={bgmRef} loop />
 
+      {/* Player HP */}
       <div style={{ position: "absolute", bottom: 20, left: 20 }}>
         <h2>Player HP: {playerHp}</h2>
       </div>
+
+      {/* Enemy HP */}
       <div style={{ position: "absolute", top: 20, right: 20 }}>
         <h2>Enemy HP: {enemyHp}</h2>
       </div>
 
+      {/* Player Sprite */}
       <img
         src={`/characters/${player.name.toLowerCase()}_combat.png`}
         style={{
@@ -107,6 +129,8 @@ export default function Combat({ player, enemyType, onExitCombat }) {
           animation: "playerIdle 3s ease-in-out infinite",
         }}
       />
+
+      {/* Enemy Sprite */}
       <img
         src={
           enemyType === "bat1"
@@ -124,6 +148,7 @@ export default function Combat({ player, enemyType, onExitCombat }) {
         }}
       />
 
+      {/* POW HIT EFFECT */}
       {showHitEffect && (
         <img
           src="/effect/AttackLanding.png"
@@ -138,7 +163,7 @@ export default function Combat({ player, enemyType, onExitCombat }) {
         />
       )}
 
-      {/* Player Turn */}
+      {/* Player Turn UI */}
       {phase === "playerTurn" && (
         <div
           style={{
@@ -155,10 +180,10 @@ export default function Combat({ player, enemyType, onExitCombat }) {
           >
             FIGHT
           </button>
+
           <button
             onClick={() => {
               setDefendNextRound(true);
-              setPhase("enemyPhase");
               startBattleHell();
             }}
             style={buttonStyle}
@@ -184,10 +209,11 @@ export default function Combat({ player, enemyType, onExitCombat }) {
       {/* Bullet Hell */}
       {phase === "bulletHell" && (
         <Battle
+          key={battleKey}              // ← Makes sure timer runs EXACTLY 10 seconds
           duration={10000}
           bulletDamage={bulletDamage}
           defendActive={defendNextRound}
-          playerClass={player.name} 
+          playerClass={player.name}
           onEnd={endBattleHell}
         />
       )}
