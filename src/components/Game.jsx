@@ -3,10 +3,12 @@ import Dungeon from "./Dungeon";
 import "../App.css";
 import "./GameOver.css";
 import { usePlayerHealth } from "../context/PlayerHealth";
+import { usePlayerStats } from "../context/PlayerStats";
 
 // export default function Game({ player, onReset, onBattle }) {
 export default function Game({ player, onReset }) {
   const dungeonRef = useRef();
+  // const { stats, setStats } = usePlayerStats();
 
   // 🔥 BGM
   const bgmRef = useRef(null);
@@ -93,6 +95,21 @@ export default function Game({ player, onReset }) {
       swapMusic(dungeonMusic);
     }, 500);
   };
+
+  // const handleUpgrade = (stat) => {
+  //   if (isProcessing) return;
+  //   setIsProcessing(true);
+
+  //   upgradeStat(stat);
+  //   dungeonRef.current.removeAethercrest();
+  //   setEncounter(null);
+  //   swapMusic(dungeonMusic);
+
+  //   setTimeout(() => {
+  //     dungeonRef.current.resume();
+  //     setIsProcessing(false);
+  //   }, 300);
+  // };
 
   useEffect(() => {
     const timer = setTimeout(() => setIntro(false), 3000);
@@ -279,12 +296,19 @@ export default function Game({ player, onReset }) {
             )}
 
             {encounter === "aethercrest" && (
-              <div className="UI">
+              <div className="UI upgrade-ui">
                 <h3>AETHERCREST</h3>
-                <p>Aethercrest obtained.</p>
+                <p>Aethercrest obtained. Choose one upgrade:</p>
+
+                {/* <div className="upgrade-buttons">
+                  <button onClick={() => handleUpgrade("ATK")}>+5 🗡️</button>
+                  <button onClick={() => handleUpgrade("SPD")}>+5 👟</button>
+                  <button onClick={() => handleUpgrade("DEF")}>+5 🛡️</button>
+                </div> */}
                 <button 
                   onClick={handleAethercrest} 
                   disabled={isProcessing}
+                  style={{margin: "1%"}}
                 >
                   {isProcessing ? "Processing..." : "Continue"}
                 </button>

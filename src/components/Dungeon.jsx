@@ -124,6 +124,9 @@ const Dungeon = forwardRef(({ onEncounter, player, onCrossroadsChoice }, ref) =>
             encounters.current.push(...newEncounters);
             setIsPaused(false);
             console.log("New encounter map generated:", newEncounters);
+        },
+        removeAethercrest() {
+            setEncounters(prev => prev.filter(e => e.type !== "aethercrest"));
         }
     }));
 
