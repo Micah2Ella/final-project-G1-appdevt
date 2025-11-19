@@ -2,100 +2,74 @@ import React, { useState, useEffect, useRef } from "react";
 import Battle from "./Battle";
 
 export default function Combat({ player, enemyType, onExitCombat }) {
-
-  // -------------------- MUSIC --------------------
   const bgmRef = useRef(null);
-
-  const bat1Music = "/music/Bat.m4a";
-  const bat2Music = "/music/StrongerBat.m4a";
-
-  const swapMusic = (src) => {
-    if (!bgmRef.current) return;
-    if (bgmRef.current.src.includes(src)) return;
-    bgmRef.current.src = src;
-    bgmRef.current.load();
-    bgmRef.current.play().catch(() => {});
-  };
-
-  useEffect(() => {
-    if (enemyType === "bat1") swapMusic(bat1Music);
-    if (enemyType === "bat2") swapMusic(bat2Music);
-  }, [enemyType]);
-
-  useEffect(() => {
-    const startMusic = () => {
-      if (bgmRef.current) {
-        bgmRef.current.volume = 0.5;
-        bgmRef.current.play().catch(() => {});
-      }
-      window.removeEventListener("click", startMusic);
-    };
-    window.addEventListener("click", startMusic);
-
-    return () => window.removeEventListener("click", startMusic);
-  }, []);
-
-  const exitCombatAndStopMusic = () => {
-    if (bgmRef.current) bgmRef.current.pause();
-    onExitCombat();
-  };
-
-  // -------------------- COMBAT LOGIC --------------------
   const [playerHp, setPlayerHp] = useState(player.HP || 100);
   const [enemyHp, setEnemyHp] = useState(enemyType === "bat1" ? 200 : 300);
   const [phase, setPhase] = useState("playerTurn");
   const [showFightMenu, setShowFightMenu] = useState(false);
   const [showHitEffect, setShowHitEffect] = useState(false);
+  const [defendNextRound, setDefendNextRound] = useState(false);
 
-  const playerSprite = `/characters/${player.name.toLowerCase()}_combat.png`;
-  const enemySprite =
-    enemyType === "bat1" ? "/enemy/bat/bat1.png" : "/enemy/bat/bat2.png";
+  // 🎵 Music
+  const bat1Music = "/music/Bat.m4a";
+  const bat2Music = "/music/StrongerBat.m4a";
+  useEffect(() => {
+    const src = enemyType === "bat1" ? bat1Music : bat2Music;
+    if (bgmRef.current) {
+      bgmRef.current.src = src;
+      bgmRef.current.volume = 0.5;
+      bgmRef.current.play().catch(() => {});
+    }
+  }, [enemyType]);
+  const stopMusic = () => bgmRef.current && bgmRef.current.pause();
 
-  const startBattleHell = () => setPhase("bulletHell");
-
+  // 🪓 Attack Logic
   const performAttack = (type) => {
     let dmg = 0;
     const atk = player.baseStats?.ATK || 30;
-
     if (type === "normal") dmg = Math.floor(atk / 2);
     else if (type === "strong" && Math.random() < 0.5) dmg = atk;
 
-    // POW effect → delay bullet hell
     if (dmg > 0) {
       setShowHitEffect(true);
-
       setTimeout(() => {
         setShowHitEffect(false);
         setEnemyHp((hp) => Math.max(hp - dmg, 0));
-        setPhase("enemyPhase");
         setShowFightMenu(false);
-        startBattleHell(); // ⭐ NOW starts AFTER POW
+        setPhase("enemyPhase");
+        startBattleHell();
       }, 850);
-
     } else {
-      // Missed hit → no POW → instant bullet hell
-      setEnemyHp((hp) => Math.max(hp - dmg, 0));
-      setPhase("enemyPhase");
       setShowFightMenu(false);
+      setPhase("enemyPhase");
       startBattleHell();
     }
   };
 
   useEffect(() => {
-    if (enemyHp <= 0) exitCombatAndStopMusic();
+    if (enemyHp <= 0) {
+      stopMusic();
+      onExitCombat();
+    }
   }, [enemyHp]);
 
   useEffect(() => {
     if (playerHp <= 0) {
+      stopMusic();
       alert("YOU DIED!");
-      exitCombatAndStopMusic();
+      onExitCombat();
     }
   }, [playerHp]);
 
+  const startBattleHell = () => setPhase("bulletHell");
+
   const endBattleHell = (damageTaken) => {
     setPlayerHp((hp) => Math.max(hp - damageTaken, 0));
+    setDefendNextRound(false);
     setPhase("playerTurn");
   };
+
+  const bulletDamage = enemyType === "bat1" ? 5 : 10;
 
   return (
     <div
@@ -112,19 +86,15 @@ export default function Combat({ player, enemyType, onExitCombat }) {
     >
       <audio ref={bgmRef} loop />
 
-      {/* Player HP */}
-      <div style={{ position: "absolute", bottom: 20, left: 20, textShadow: "0 0 10px black" }}>
+      <div style={{ position: "absolute", bottom: 20, left: 20 }}>
         <h2>Player HP: {playerHp}</h2>
       </div>
-
-      {/* Enemy HP */}
-      <div style={{ position: "absolute", top: 20, right: 20, textShadow: "0 0 10px black" }}>
+      <div style={{ position: "absolute", top: 20, right: 20 }}>
         <h2>Enemy HP: {enemyHp}</h2>
       </div>
 
-      {/* Player Sprite */}
       <img
-        src={playerSprite}
+        src={`/characters/${player.name.toLowerCase()}_combat.png`}
         style={{
           position: "absolute",
           bottom: 80,
@@ -135,10 +105,12 @@ export default function Combat({ player, enemyType, onExitCombat }) {
           animation: "playerIdle 3s ease-in-out infinite",
         }}
       />
-
-      {/* Enemy Sprite */}
       <img
-        src={enemySprite}
+        src={
+          enemyType === "bat1"
+            ? "/enemy/bat/bat1.png"
+            : "/enemy/bat/bat2.png"
+        }
         style={{
           position: "absolute",
           top: 80,
@@ -150,7 +122,6 @@ export default function Combat({ player, enemyType, onExitCombat }) {
         }}
       />
 
-      {/* POW HIT EFFECT */}
       {showHitEffect && (
         <img
           src="/effect/AttackLanding.png"
@@ -160,14 +131,12 @@ export default function Combat({ player, enemyType, onExitCombat }) {
             right: 200,
             height: 250,
             imageRendering: "pixelated",
-            pointerEvents: "none",
-            filter: "drop-shadow(0 0 15px white)",
             animation: "hitPop 0.3s ease-out",
           }}
         />
       )}
 
-      {/* --------------------------- PLAYER TURN ----------------------------- */}
+      {/* Player Turn */}
       {phase === "playerTurn" && (
         <div
           style={{
@@ -176,34 +145,21 @@ export default function Combat({ player, enemyType, onExitCombat }) {
             left: 1000,
             display: "flex",
             gap: "20px",
-            filter: "drop-shadow(0px 0px 25px black)",
           }}
         >
           <button
             onClick={() => setShowFightMenu(true)}
-            style={{
-              color: "black",
-              background: "white",
-              border: "2px solid white",
-              padding: "10px 20px",
-              fontSize: "35px",
-              fontFamily: "Retro Gaming",
-              cursor: "pointer",
-            }}
+            style={buttonStyle}
           >
             FIGHT
           </button>
-
           <button
-            style={{
-              color: "black",
-              background: "white",
-              border: "2px solid white",
-              padding: "10px 20px",
-              fontSize: "35px",
-              fontFamily: "Retro Gaming",
-              cursor: "pointer",
+            onClick={() => {
+              setDefendNextRound(true);
+              setPhase("enemyPhase");
+              startBattleHell();
             }}
+            style={buttonStyle}
           >
             DEFEND
           </button>
@@ -212,39 +168,49 @@ export default function Combat({ player, enemyType, onExitCombat }) {
 
       {/* Fight Menu */}
       {showFightMenu && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 140,
-            left: 1015,
-            border: "2px solid white",
-            borderRadius: 10,
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            background: "rgba(0,0,0,.7)",
-            padding: 20,
-          }}
-        >
+        <div style={fightMenuStyle}>
           <button onClick={() => performAttack("normal")}>
-            Normal Attack (100% hit, half dmg)
+            Normal Attack
           </button>
-
           <button onClick={() => performAttack("strong")}>
-            Strong Attack (50% hit, full dmg)
+            Strong Attack
           </button>
-
           <button onClick={() => setShowFightMenu(false)}>Cancel</button>
         </div>
       )}
 
-      {/* --------------------------- BULLET HELL ----------------------------- */}
+      {/* Bullet Hell */}
       {phase === "bulletHell" && (
         <Battle
           duration={10000}
-          onEnd={(damageTaken) => endBattleHell(damageTaken)}
+          bulletDamage={bulletDamage}
+          defendActive={defendNextRound}
+          onEnd={endBattleHell}
         />
       )}
     </div>
   );
 }
+
+const buttonStyle = {
+  color: "black",
+  background: "white",
+  border: "2px solid white",
+  padding: "10px 20px",
+  fontSize: "35px",
+  fontFamily: "Retro Gaming",
+  cursor: "pointer",
+};
+
+const fightMenuStyle = {
+  position: "absolute",
+  bottom: 140,
+  left: 1015,
+  border: "2px solid white",
+  borderRadius: 10,
+  display: "flex",
+  flexDirection: "column",
+  gap: "10px",
+  background: "rgba(0,0,0,.7)",
+  padding: 20,
+};

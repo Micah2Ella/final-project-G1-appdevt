@@ -2,11 +2,15 @@ import React, { useEffect, useRef, useState } from "react";
 
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
-
 const PLAYER_SIZE = 20;
 const MAX_HP = 50;
 
-export default function Battle({ duration = 10000, onEnd }) {
+export default function Battle({
+  duration = 10000,
+  bulletDamage = 5,
+  defendActive = false,
+  onEnd,
+}) {
   const canvasRef = useRef(null);
   const keys = useRef({});
   const bullets = useRef([]);
@@ -18,12 +22,8 @@ export default function Battle({ duration = 10000, onEnd }) {
 
   const [hp, setHp] = useState(MAX_HP);
 
-  const lastTime = useRef(0);
-
-  // ---------------- PLAYER MOVEMENT ----------------
   const updatePlayer = () => {
     const p = player.current;
-
     if (keys.current["W"]) p.y -= p.speed;
     if (keys.current["S"]) p.y += p.speed;
     if (keys.current["A"]) p.x -= p.speed;
@@ -33,11 +33,9 @@ export default function Battle({ duration = 10000, onEnd }) {
     p.y = Math.max(PLAYER_SIZE, Math.min(CANVAS_HEIGHT - PLAYER_SIZE, p.y));
   };
 
-  // ---------------- BULLETS ----------------
   const spawnBullet = () => {
     const angle = Math.random() * Math.PI * 2;
     const speed = 2 + Math.random() * 2;
-
     bullets.current.push({
       x: CANVAS_WIDTH / 2,
       y: CANVAS_HEIGHT / 3,
@@ -49,6 +47,7 @@ export default function Battle({ duration = 10000, onEnd }) {
 
   const updateBullets = () => {
     const p = player.current;
+    const dmgMultiplier = defendActive ? 0.5 : 1;
 
     bullets.current = bullets.current.filter((b) => {
       b.x += b.dx;
@@ -57,8 +56,8 @@ export default function Battle({ duration = 10000, onEnd }) {
       const dx = b.x - p.x;
       const dy = b.y - p.y;
       if (Math.sqrt(dx * dx + dy * dy) < b.size + PLAYER_SIZE) {
-        // Player hit → lose HP
-        setHp((h) => Math.max(h - 1, 0));
+        const actualDamage = Math.floor(bulletDamage * dmgMultiplier);
+        setHp((h) => Math.max(h - actualDamage, 0));
         return false;
       }
 
@@ -71,17 +70,14 @@ export default function Battle({ duration = 10000, onEnd }) {
     });
   };
 
-  // ---------------- DRAW ----------------
   const draw = (ctx) => {
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Player
     ctx.fillStyle = "yellow";
     ctx.beginPath();
     ctx.arc(player.current.x, player.current.y, PLAYER_SIZE, 0, Math.PI * 2);
     ctx.fill();
 
-    // Bullets
     ctx.fillStyle = "red";
     bullets.current.forEach((b) => {
       ctx.beginPath();
@@ -90,19 +86,14 @@ export default function Battle({ duration = 10000, onEnd }) {
     });
   };
 
-  // ---------------- GAME LOOP ----------------
-  const gameLoop = (timestamp) => {
-    lastTime.current = timestamp;
+  const loop = () => {
     const ctx = canvasRef.current.getContext("2d");
-
     updatePlayer();
     updateBullets();
     draw(ctx);
-
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(loop);
   };
 
-  // ---------------- LIFECYCLE ----------------
   useEffect(() => {
     const down = (e) => (keys.current[e.key.toUpperCase()] = true);
     const up = (e) => (keys.current[e.key.toUpperCase()] = false);
@@ -110,14 +101,12 @@ export default function Battle({ duration = 10000, onEnd }) {
     document.addEventListener("keydown", down);
     document.addEventListener("keyup", up);
 
-    requestAnimationFrame(gameLoop);
-
+    requestAnimationFrame(loop);
     const interval = setInterval(spawnBullet, 120);
 
-    // ⏳ END BATTLE AFTER 30 SECONDS
     const timer = setTimeout(() => {
       const damageTaken = MAX_HP - hp;
-      onEnd(damageTaken);   // ← sends damage back to Combat.jsx
+      onEnd(damageTaken);
     }, duration);
 
     return () => {
@@ -128,12 +117,10 @@ export default function Battle({ duration = 10000, onEnd }) {
     };
   }, []);
 
-  // ---------------- HP BAR ----------------
   const hpPercent = (hp / MAX_HP) * 100;
 
   return (
     <div
-      className="game-container"
       style={{
         display: "flex",
         flexDirection: "column",
@@ -142,10 +129,8 @@ export default function Battle({ duration = 10000, onEnd }) {
         height: "100vh",
         width: "100vw",
         background: "black",
-        position: "relative",
       }}
     >
-
       <canvas
         ref={canvasRef}
         width={CANVAS_WIDTH}
@@ -154,9 +139,17 @@ export default function Battle({ duration = 10000, onEnd }) {
       />
 
       <div style={{ width: CANVAS_WIDTH, marginTop: 20, textAlign: "center" }}>
-        <div style={{ marginBottom: 5, fontSize: 20, color: "white", fontFamily: "Retro Gaming" }}>
+        <div
+          style={{
+            marginBottom: 5,
+            fontSize: 20,
+            color: "white",
+            fontFamily: "Retro Gaming",
+          }}
+        >
           HP {hp} / {MAX_HP}
         </div>
+
         <div
           style={{
             background: "#333",
@@ -172,7 +165,7 @@ export default function Battle({ duration = 10000, onEnd }) {
               background:
                 hpPercent < 30 ? "red" : hpPercent < 60 ? "orange" : "#304d6d",
               borderRadius: 3,
-              transition: "width 0.3s, background-color 0.3s",
+              transition: "width 0.3s",
             }}
           />
         </div>
