@@ -1,6 +1,6 @@
 import React from "react";
 import "../App.css";
-import fountainSprite from "/fountain/sprite3.png";
+import fountainSprite from "/fountain/fountain.PNG";
 import bat1 from "/enemy/bat/bat1.png";
 import bat2 from "/enemy/bat/bat2.png";
 import crossroadSprite from "/crossroads/crossroad.png";
@@ -8,9 +8,9 @@ import aethercrestSprite from "/aethercrest/aethercrest.png";
 
 export default function Encounters({ type, x }) {
     const encounterData = {
-        fountain: { img: fountainSprite, width: 296, height: 224, y: 50 },
-        bat1: { img: bat1, width: 108, height: 72, y: 150 },
-        bat2: { img: bat2, width: 108, height: 72, y: 150 },
+        fountain: { img: fountainSprite, width: 268.5, height: 236.5, y: 50 },
+        bat1: { img: bat1, width: 251, height: 132, y: 150 },
+        bat2: { img: bat2, width: 342, height: 166, y: 150 },
         crossroads: { img: crossroadSprite, width: 100, height: 308, y: 50 },
         aethercrest: { img: aethercrestSprite, width: 54, height: 52, y: 100},
     };
