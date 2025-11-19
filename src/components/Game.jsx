@@ -5,8 +5,8 @@ import "./GameOver.css";
 import { usePlayerHealth } from "../context/PlayerHealth";
 import { usePlayerStats } from "../context/PlayerStats";
 
-// export default function Game({ player, onReset, onBattle }) {
-export default function Game({ player, onReset }) {
+// ⭐ FIXED: onBattle was missing!
+export default function Game({ player, onReset, onBattle }) {
   const dungeonRef = useRef();
   const { stats, upgrade } = usePlayerStats();
 
@@ -58,7 +58,6 @@ export default function Game({ player, onReset }) {
     if (isProcessing) return;
 
     setIsProcessing(true);
-    console.log("Player chose:", chosenType);
     dungeonRef.current.setMysteryType(chosenType);
     setCrossroadsChoices(null);
     handleExitEncounter();
@@ -69,7 +68,7 @@ export default function Game({ player, onReset }) {
 
     setIsProcessing(true);
 
-    const scalingBonus = aethercrestCount * 5
+    const scalingBonus = aethercrestCount * 5;
 
     if (encounter === "fountain") heal(10 + scalingBonus);
     if (encounter === "bat1") takeDamage(10 + scalingBonus);
@@ -85,9 +84,7 @@ export default function Game({ player, onReset }) {
   };
 
   const handleUpgrade = (stat) => {
-    if (!stats) {
-      return <div style={{color:"white"}}>Loading stats...</div>;
-    }
+    if (!stats) return;
     if (isProcessing) return;
     setIsProcessing(true);
 
@@ -98,7 +95,7 @@ export default function Game({ player, onReset }) {
       dungeonRef.current.removeAethercrest();
       setEncounter(null);
       dungeonRef.current.resume();
-      setAethercrestCount(prev => prev + 1);
+      setAethercrestCount((prev) => prev + 1);
       setIsProcessing(false);
       swapMusic(dungeonMusic);
     }, 300);
@@ -109,7 +106,7 @@ export default function Game({ player, onReset }) {
     return () => clearTimeout(timer);
   }, []);
 
-  // 🔥 Autoplay fix — start music on first user interaction
+  // 🔥 Autoplay fix
   useEffect(() => {
     const startMusic = () => {
       if (bgmRef.current) {
@@ -119,7 +116,6 @@ export default function Game({ player, onReset }) {
       window.removeEventListener("click", startMusic);
     };
     window.addEventListener("click", startMusic);
-
     return () => window.removeEventListener("click", startMusic);
   }, []);
 
@@ -149,22 +145,21 @@ export default function Game({ player, onReset }) {
       style={{
         height: "100vh",
         overflow: "hidden",
-        position: "relative"
+        position: "relative",
       }}
     >
       {/* 🔊 BACKGROUND MUSIC */}
       <audio ref={bgmRef} src={dungeonMusic} loop />
 
       <div className="dungeon-wrapper">
-        <Dungeon 
-          ref={dungeonRef} 
-          onEncounter={handleEncounter} 
-          onCrossroadsChoice={handleCrossroadsChoice} 
+        <Dungeon
+          ref={dungeonRef}
+          onEncounter={handleEncounter}
+          onCrossroadsChoice={handleCrossroadsChoice}
           player={player}
         />
       </div>
 
-      {/* UI BELOW IS UNCHANGED */}
       <div
         style={{
           height: "40vh",
@@ -199,10 +194,13 @@ export default function Game({ player, onReset }) {
               <p>
                 HP: {hp} | ATK: {stats.ATK} | SPD: {stats.SPD} | DEF: {stats.DEF}
               </p>
-              <button 
-                onClick={onReset} 
+              <button
+                onClick={onReset}
                 disabled={isProcessing}
-                style={{ opacity: isProcessing ? 0.5 : 1, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
+                style={{
+                  opacity: isProcessing ? 0.5 : 1,
+                  cursor: isProcessing ? "not-allowed" : "pointer",
+                }}
               >
                 {isProcessing ? "Processing..." : "Play Again"}
               </button>
@@ -210,10 +208,12 @@ export default function Game({ player, onReset }) {
           </div>
         )}
 
-        {/* Rest of UI unchanged */}
+        {/* ----------------- UI ----------------- */}
         <div className="game-ui">
           <div className="statbar">
-            <h2>{player.playerName} | {player.name}</h2>
+            <h2>
+              {player.playerName} | {player.name}
+            </h2>
             <div className="grouped-stats">
               <h2>♥️{hp}</h2>
               <h2>🗡️{stats.ATK}</h2>
@@ -227,22 +227,22 @@ export default function Game({ player, onReset }) {
               <div className="UI">
                 <h3>HEALING FOUNTAIN</h3>
                 <p>You recover 10 health.</p>
-                <button 
-                  onClick={handleExitEncounter} 
-                  disabled={isProcessing}
-                >
+                <button onClick={handleExitEncounter} disabled={isProcessing}>
                   {isProcessing ? "Processing..." : "Continue"}
                 </button>
               </div>
             )}
 
+            {/* ⭐ FIXED: onBattle now works */}
             {encounter === "bat1" && (
               <div className="UI">
                 <h3>NORMAL BAT ENCOUNTER</h3>
                 <p>You face a bat.</p>
-                <button 
-                  onClick={handleExitEncounter} 
-                  // onClick={onBattle} 
+                <button
+                  onClick={() => {
+                    swapMusic(dungeonMusic);
+                    onBattle("bat1");
+                  }}
                   disabled={isProcessing}
                 >
                   {isProcessing ? "Processing..." : "Continue"}
@@ -254,9 +254,11 @@ export default function Game({ player, onReset }) {
               <div className="UI">
                 <h3>STRONG BAT ENCOUNTER</h3>
                 <p>You face a strong bat.</p>
-                <button 
-                  onClick={handleExitEncounter} 
-                  // onClick={onBattle} 
+                <button
+                  onClick={() => {
+                    swapMusic(dungeonMusic);
+                    onBattle("bat2");
+                  }}
                   disabled={isProcessing}
                 >
                   {isProcessing ? "Processing..." : "Continue"}
@@ -270,15 +272,21 @@ export default function Game({ player, onReset }) {
                 <p>You reached a fork in the road.</p>
 
                 {crossroadsChoices && (
-                  <div style={{ display: "flex", gap: "20px", marginTop: "10px" }}>
-                    <button 
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "20px",
+                      marginTop: "10px",
+                    }}
+                  >
+                    <button
                       onClick={() => handlePlayerChoice(crossroadsChoices[0])}
                       disabled={isProcessing}
                     >
                       {isProcessing ? "Processing..." : "Go Left"}
                     </button>
 
-                    <button 
+                    <button
                       onClick={() => handlePlayerChoice(crossroadsChoices[1])}
                       disabled={isProcessing}
                     >
@@ -295,18 +303,24 @@ export default function Game({ player, onReset }) {
                 <p>Aethercrest obtained. Choose one upgrade:</p>
 
                 <div className="upgrade-buttons">
-                  <button 
+                  <button
                     onClick={() => handleUpgrade("ATK")}
                     disabled={isProcessing}
-                  >{isProcessing ? "Processing..." : "+5 🗡️"}</button>
+                  >
+                    {isProcessing ? "Processing..." : "+5 🗡️"}
+                  </button>
                   <button
                     onClick={() => handleUpgrade("SPD")}
                     disabled={isProcessing}
-                  >{isProcessing ? "Processing..." : "+5 👟"}</button>
-                  <button 
+                  >
+                    {isProcessing ? "Processing..." : "+5 👟"}
+                  </button>
+                  <button
                     onClick={() => handleUpgrade("DEF")}
                     disabled={isProcessing}
-                  >{isProcessing ? "Processing..." : "+5 🛡️"}</button>
+                  >
+                    {isProcessing ? "Processing..." : "+5 🛡️"}
+                  </button>
                 </div>
               </div>
             )}

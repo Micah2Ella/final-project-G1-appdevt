@@ -1,79 +1,168 @@
-  import { useState } from "react";
-  import TitleScreen from "./components/TitleScreen";
-  import CharacterSelect from "./components/CharacterSelect";
-  import Game from "./components/Game";
-  import Controls from "./components/Controls";   // ← ADD THIS
-  import "./App.css";
-  import { PlayerHealthProvider } from "./context/PlayerHealth";
-  import { BrowserRouter } from "react-router-dom";
-  import { PlayerStatsProvider } from "./context/PlayerStats";
+import { useState, useRef, useEffect } from "react";
+import TitleScreen from "./components/TitleScreen";
+import CharacterSelect from "./components/CharacterSelect";
+import Game from "./components/Game";
+import Controls from "./components/Controls";
+import Combat from "./components/Combat";
+import "./App.css";
+import { PlayerHealthProvider } from "./context/PlayerHealth";
+import { BrowserRouter } from "react-router-dom";
+import { PlayerStatsProvider } from "./context/PlayerStats";
 
-  export default function App() {
-    const [screen, setScreen] = useState("title");
-    const [fade, setFade] = useState(false);
-    const [playerData, setPlayerData] = useState(null);
+export default function App() {
+  const [screen, setScreen] = useState("title");
+  const [fade, setFade] = useState(false);
+  const [playerData, setPlayerData] = useState(null);
+  const [battleEnemy, setBattleEnemy] = useState(null);
 
-    const handleStart = () => {
-      setFade(true);
-      setTimeout(() => {
-        setScreen("characterSelect");
-        setFade(false);
-      }, 600);
+  // -------------------- 🎵 TITLE MUSIC --------------------
+  const titleMusicRef = useRef(null);
+
+  useEffect(() => {
+    // Create audio only once
+    if (!titleMusicRef.current) {
+      const audio = new Audio("/music/Title.m4a");
+      audio.loop = true;
+      audio.volume = 0.5;
+      titleMusicRef.current = audio;
+    }
+
+    // Auto-play unlock
+    const unlock = () => {
+      titleMusicRef.current.play().catch(() => {});
+      window.removeEventListener("click", unlock);
     };
 
-    const handleControls = () => {
-      setFade(true);
-      setTimeout(() => {
-        setScreen("controls");
-        setFade(false);
-      }, 600);
-    };
+    window.addEventListener("click", unlock);
+    return () => window.removeEventListener("click", unlock);
+  }, []);
 
-    const handleCharacterSelect = (character) => {
-      setPlayerData(character);
-      setFade(true);
-      setTimeout(() => {
-        setScreen("gameplay");
-        setFade(false);
-      }, 600);
-    };
+  // Always reset + restart when going to TITLE
+  const restartTitleMusic = () => {
+    if (!titleMusicRef.current) return;
 
-    const handleReset = () => {
-      setFade(true);
-      setTimeout(() => {
-        setPlayerData(null);
-        setScreen("characterSelect");
-        setFade(false);
-      }, 600);
-    };
+    titleMusicRef.current.pause();
+    titleMusicRef.current.currentTime = 0;  // ← RESET
+    titleMusicRef.current.play().catch(() => {});
+  };
 
-    return (
-      <BrowserRouter>
-        <div className={`fade-wrapper ${fade ? "fade-out" : "fade-in"}`}>
+  // Stop Title music when entering gameplay
+  const stopTitleMusic = () => {
+    if (!titleMusicRef.current) return;
 
-          {screen === "title" && (
+    titleMusicRef.current.pause();
+    titleMusicRef.current.currentTime = 0; // ensure clean stop
+  };
+
+  // ---------------------------------------------------------
+  // SCREEN TRANSITIONS
+  // ---------------------------------------------------------
+
+  const handleStart = () => {
+    stopTitleMusic();
+    setFade(true);
+    setTimeout(() => {
+      setScreen("characterSelect");
+      setFade(false);
+    }, 600);
+  };
+
+  const handleControls = () => {
+    setFade(true);
+    setTimeout(() => {
+      setScreen("controls");
+      setFade(false);
+    }, 600);
+  };
+
+  const handleCharacterSelect = (character) => {
+    setPlayerData(character);
+    stopTitleMusic(); // Starting game → stop music
+    setFade(true);
+    setTimeout(() => {
+      setScreen("gameplay");
+      setFade(false);
+    }, 600);
+  };
+
+  const handleReset = () => {
+    setFade(true);
+    setTimeout(() => {
+      setPlayerData(null);
+      // Returning to character select does NOT restart the music
+      setScreen("characterSelect");
+      setFade(false);
+    }, 600);
+  };
+
+  const handleBattle = (enemy) => {
+    setBattleEnemy(enemy);
+    setFade(true);
+    setTimeout(() => {
+      setScreen("combat");
+      setFade(false);
+    }, 600);
+  };
+
+  return (
+    <BrowserRouter>
+      <div className={`fade-wrapper ${fade ? "fade-out" : "fade-in"}`}>
+
+        {/* ---------------------- TITLE SCREEN ---------------------- */}
+        {screen === "title" && (
+          <>
+            {restartTitleMusic()}
             <TitleScreen 
               onStart={handleStart} 
-              onControls={handleControls}   // ⭐ NEW
+              onControls={handleControls}
             />
-          )}
+          </>
+        )}
 
-          {screen === "controls" && (
-            <Controls onBack={() => setScreen("title")} />  
-          )}
+        {/* ---------------------- CONTROLS ---------------------- */}
+        {screen === "controls" && (
+          <Controls onBack={() => setScreen("title")} />
+        )}
 
-          {screen === "characterSelect" && (
-            <CharacterSelect onSelect={handleCharacterSelect} />
-          )}
+        {/* ---------------------- CHARACTER SELECT ---------------------- */}
+        {screen === "characterSelect" && (
+          <CharacterSelect onSelect={handleCharacterSelect} />
+        )}
 
-          {screen === "gameplay" && (
-            <PlayerHealthProvider baseHP={playerData?.baseStats?.HP ?? 100}>
-              <PlayerStatsProvider baseStats={playerData?.baseStats}>
-                <Game player={playerData} onReset={handleReset} />
-              </PlayerStatsProvider>
+        {/* ---------------------- GAMEPLAY ---------------------- */}
+        {screen === "gameplay" && (
+          <PlayerHealthProvider baseHP={playerData?.baseStats?.HP ?? 100}>
+            <PlayerStatsProvider baseStats={playerData?.baseStats}>
+              <Game 
+                player={playerData} 
+                onReset={handleReset}
+                onBattle={handleBattle}
+              />
+            </PlayerStatsProvider>
           </PlayerHealthProvider>
-          )}  
-        </div>
-      </BrowserRouter>
-    );
-  }
+        )}
+
+        {/* ---------------------- COMBAT ---------------------- */}
+        {screen === "combat" && (
+          <PlayerHealthProvider baseHP={playerData?.baseStats?.HP ?? 100}>
+            <PlayerStatsProvider baseStats={playerData?.baseStats}>
+              <Combat
+                player={playerData}
+                enemyType={battleEnemy}
+                onExitCombat={() => {
+                  setFade(true);
+                  setTimeout(() => {
+                    setScreen("gameplay");
+                    setFade(false);
+                    setBattleEnemy(null);
+                  }, 600);
+                }}
+              />
+            </PlayerStatsProvider>
+          </PlayerHealthProvider>
+        )}
+
+      </div>
+    </BrowserRouter>
+  );
+}
