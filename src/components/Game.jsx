@@ -8,7 +8,7 @@ import { usePlayerStats } from "../context/PlayerStats";
 // export default function Game({ player, onReset, onBattle }) {
 export default function Game({ player, onReset }) {
   const dungeonRef = useRef();
-  // const { stats, setStats } = usePlayerStats();
+  const { stats, upgrade } = usePlayerStats();
 
   // 🔥 BGM
   const bgmRef = useRef(null);
@@ -19,6 +19,7 @@ export default function Game({ player, onReset }) {
   const [crossroadsChoices, setCrossroadsChoices] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const { hp, takeDamage, heal } = usePlayerHealth();
+  const [aethercrestCount, setAethercrestCount] = useState(0);
 
   // 🔊 MUSIC FILES
   const dungeonMusic = "/music/Dungeon.m4a";
@@ -68,9 +69,11 @@ export default function Game({ player, onReset }) {
 
     setIsProcessing(true);
 
-    if (encounter === "fountain") heal(10);
-    if (encounter === "bat1") takeDamage(10);
-    if (encounter === "bat2") takeDamage(20);
+    const scalingBonus = aethercrestCount * 5
+
+    if (encounter === "fountain") heal(10 + scalingBonus);
+    if (encounter === "bat1") takeDamage(10 + scalingBonus);
+    if (encounter === "bat2") takeDamage(20 + scalingBonus);
 
     console.log("Encounter ended!");
     setEncounter(null);
@@ -81,35 +84,25 @@ export default function Game({ player, onReset }) {
     dungeonRef.current.resume();
   };
 
-  const handleAethercrest = () => {
+  const handleUpgrade = (stat) => {
+    if (!stats) {
+      return <div style={{color:"white"}}>Loading stats...</div>;
+    }
     if (isProcessing) return;
-
     setIsProcessing(true);
+
+    upgrade(stat);
+
     setTimeout(() => {
       dungeonRef.current.regenerateEncounters();
+      dungeonRef.current.removeAethercrest();
       setEncounter(null);
       dungeonRef.current.resume();
+      setAethercrestCount(prev => prev + 1);
       setIsProcessing(false);
-
-      // aethercrest isn't bat → return to dungeon music
       swapMusic(dungeonMusic);
-    }, 500);
+    }, 300);
   };
-
-  // const handleUpgrade = (stat) => {
-  //   if (isProcessing) return;
-  //   setIsProcessing(true);
-
-  //   upgradeStat(stat);
-  //   dungeonRef.current.removeAethercrest();
-  //   setEncounter(null);
-  //   swapMusic(dungeonMusic);
-
-  //   setTimeout(() => {
-  //     dungeonRef.current.resume();
-  //     setIsProcessing(false);
-  //   }, 300);
-  // };
 
   useEffect(() => {
     const timer = setTimeout(() => setIntro(false), 3000);
@@ -135,6 +128,7 @@ export default function Game({ player, onReset }) {
     if (hp <= 0) {
       setIsProcessing(false);
       setGameOver(true);
+      setAethercrestCount(0);
 
       if (dungeonRef.current) dungeonRef.current.pause();
       if (bgmRef.current) bgmRef.current.pause();
@@ -191,7 +185,7 @@ export default function Game({ player, onReset }) {
               <h1>Welcome, {player.playerName}!</h1>
               <h2>You chose: {player.name}</h2>
               <p>
-                HP: {player.baseStats.HP} | ATK: {player.baseStats.ATK} | SPD: {player.baseStats.SPD} | DEF: {player.baseStats.DEF}
+                HP: {hp} | ATK: {stats.ATK} | SPD: {stats.SPD} | DEF: {stats.DEF}
               </p>
             </div>
           </div>
@@ -203,7 +197,7 @@ export default function Game({ player, onReset }) {
               <img src="/characters/player_death.png" />
               <h1>💀 YOU DIED 💀</h1>
               <p>
-                HP: {hp} | ATK: {player.baseStats.ATK} | SPD: {player.baseStats.SPD} | DEF: {player.baseStats.DEF}
+                HP: {hp} | ATK: {stats.ATK} | SPD: {stats.SPD} | DEF: {stats.DEF}
               </p>
               <button 
                 onClick={onReset} 
@@ -222,9 +216,9 @@ export default function Game({ player, onReset }) {
             <h2>{player.playerName} | {player.name}</h2>
             <div className="grouped-stats">
               <h2>♥️{hp}</h2>
-              <h2>🗡️{player.baseStats.ATK}</h2>
-              <h2>👟{player.baseStats.SPD}</h2>
-              <h2>🛡️{player.baseStats.DEF}</h2>
+              <h2>🗡️{stats.ATK}</h2>
+              <h2>👟{stats.SPD}</h2>
+              <h2>🛡️{stats.DEF}</h2>
             </div>
           </div>
 
@@ -300,18 +294,20 @@ export default function Game({ player, onReset }) {
                 <h3>AETHERCREST</h3>
                 <p>Aethercrest obtained. Choose one upgrade:</p>
 
-                {/* <div className="upgrade-buttons">
-                  <button onClick={() => handleUpgrade("ATK")}>+5 🗡️</button>
-                  <button onClick={() => handleUpgrade("SPD")}>+5 👟</button>
-                  <button onClick={() => handleUpgrade("DEF")}>+5 🛡️</button>
-                </div> */}
-                <button 
-                  onClick={handleAethercrest} 
-                  disabled={isProcessing}
-                  style={{margin: "1%"}}
-                >
-                  {isProcessing ? "Processing..." : "Continue"}
-                </button>
+                <div className="upgrade-buttons">
+                  <button 
+                    onClick={() => handleUpgrade("ATK")}
+                    disabled={isProcessing}
+                  >{isProcessing ? "Processing..." : "+5 🗡️"}</button>
+                  <button
+                    onClick={() => handleUpgrade("SPD")}
+                    disabled={isProcessing}
+                  >{isProcessing ? "Processing..." : "+5 👟"}</button>
+                  <button 
+                    onClick={() => handleUpgrade("DEF")}
+                    disabled={isProcessing}
+                  >{isProcessing ? "Processing..." : "+5 🛡️"}</button>
+                </div>
               </div>
             )}
           </div>
