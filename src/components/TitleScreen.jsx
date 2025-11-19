@@ -1,20 +1,45 @@
-import React from "react";
-
+import React, { useEffect, useRef } from "react";
 
 export default function TitleScreen({ onStart, onControls }) {
+  const bgmRef = useRef(null);
+
+  // AUTOPLAY FIX — browser requires user interaction first
+  useEffect(() => {
+    const startMusic = () => {
+      if (bgmRef.current) {
+        bgmRef.current.volume = 0.5;
+        bgmRef.current.play().catch(() => {});
+      }
+      window.removeEventListener("click", startMusic);
+    };
+
+    window.addEventListener("click", startMusic);
+    return () => window.removeEventListener("click", startMusic);
+  }, []);
+
+  // Load the music once when component mounts
+  useEffect(() => {
+    if (bgmRef.current) {
+      bgmRef.current.src = "/music/Title.m4a";
+      bgmRef.current.load();
+    }
+  }, []);
+
   return (
     <div className="title-screen">
+      {/* 🔊 MUSIC */}
+      <audio ref={bgmRef} loop />
+
       <div className="Title">
         <h1>Aethercrest</h1>
 
-        <button onClick={onStart}>START GAME</button><br/>
+        <button onClick={onStart}>START GAME</button><br />
         <button onClick={onControls}>CONTROLS</button>
       </div>
 
       <div className="Image">
         <img src="background/TitleScreenBG.png" />
       </div>
-      
 
       <style jsx>{`
         .title-screen {
@@ -36,8 +61,8 @@ export default function TitleScreen({ onStart, onControls }) {
         }
 
         .Title {
-        z-index: 2;
-        margin-left: 5%;
+          z-index: 2;
+          margin-left: 5%;
         }
 
         h1 {
