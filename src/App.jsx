@@ -1,9 +1,9 @@
+// App.jsx
 import { useState, useRef, useEffect } from "react";
 import TitleScreen from "./components/TitleScreen";
 import CharacterSelect from "./components/CharacterSelect";
 import Game from "./components/Game";
 import Controls from "./components/Controls";
-import Combat from "./components/Combat";
 import "./App.css";
 import { PlayerHealthProvider } from "./context/PlayerHealth";
 import { BrowserRouter } from "react-router-dom";
@@ -13,7 +13,6 @@ export default function App() {
   const [screen, setScreen] = useState("title");
   const [fade, setFade] = useState(false);
   const [playerData, setPlayerData] = useState(null);
-  const [battleEnemy, setBattleEnemy] = useState(null);
 
   // -------------------- 🎵 TITLE MUSIC --------------------
   const titleMusicRef = useRef(null);
@@ -42,7 +41,7 @@ export default function App() {
     if (!titleMusicRef.current) return;
 
     titleMusicRef.current.pause();
-    titleMusicRef.current.currentTime = 0;  // ← RESET
+    titleMusicRef.current.currentTime = 0; // ← RESET
     titleMusicRef.current.play().catch(() => {});
   };
 
@@ -95,73 +94,34 @@ export default function App() {
     }, 600);
   };
 
-  const handleBattle = (enemy) => {
-    setBattleEnemy(enemy);
-    setFade(true);
-    setTimeout(() => {
-      setScreen("combat");
-      setFade(false);
-    }, 600);
-  };
-
   return (
     <BrowserRouter>
       <div className={`fade-wrapper ${fade ? "fade-out" : "fade-in"}`}>
-
         {/* ---------------------- TITLE SCREEN ---------------------- */}
         {screen === "title" && (
           <>
             {restartTitleMusic()}
-            <TitleScreen 
-              onStart={handleStart} 
-              onControls={handleControls}
-            />
+            <TitleScreen onStart={handleStart} onControls={handleControls} />
           </>
         )}
 
         {/* ---------------------- CONTROLS ---------------------- */}
-        {screen === "controls" && (
-          <Controls onBack={() => setScreen("title")} />
-        )}
+        {screen === "controls" && <Controls onBack={() => setScreen("title")} />}
 
         {/* ---------------------- CHARACTER SELECT ---------------------- */}
         {screen === "characterSelect" && (
           <CharacterSelect onSelect={handleCharacterSelect} />
         )}
 
-        {/* ---------------------- GAMEPLAY ---------------------- */}
+        {/* ---------------------- GAMEPLAY (PERSISTENT) ---------------------- */}
         {screen === "gameplay" && (
           <PlayerHealthProvider baseHP={playerData?.baseStats?.HP ?? 100}>
             <PlayerStatsProvider baseStats={playerData?.baseStats}>
-              <Game 
-                player={playerData} 
-                onReset={handleReset}
-                onBattle={handleBattle}
-              />
+              {/* Game now handles combat overlay internally */}
+              <Game player={playerData} onReset={handleReset} />
             </PlayerStatsProvider>
           </PlayerHealthProvider>
         )}
-
-        {/* ---------------------- COMBAT ---------------------- */}
-        {screen === "combat" && (
-          <PlayerHealthProvider baseHP={playerData?.baseStats?.HP ?? 100}>
-            <PlayerStatsProvider baseStats={playerData?.baseStats}>
-              <Combat
-                player={playerData}
-                enemyType={battleEnemy}
-                onExitCombat={() => {
-                  setFade(true);
-                  setTimeout(() => {
-                    setScreen("gameplay");
-                    setFade(false);
-                    setBattleEnemy(null);
-                  }, 600);
-                }}
-              />
-            </PlayerStatsProvider>
-          </PlayerHealthProvider>
-        )}
-
       </div>
     </BrowserRouter>
   );
