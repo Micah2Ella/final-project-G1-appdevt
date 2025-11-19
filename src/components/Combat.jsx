@@ -197,10 +197,10 @@ export default function Combat({ player, enemyType, onExitCombat }) {
       {showFightMenu && (
         <div style={fightMenuStyle}>
           <button onClick={() => performAttack("normal")}>
-            Normal Attack
+            Normal Attack (Always Lands, Half DMG)
           </button>
           <button onClick={() => performAttack("strong")}>
-            Strong Attack
+            Strong Attack (50% Miss Chance, Full DMG)
           </button>
           <button onClick={() => setShowFightMenu(false)}>Cancel</button>
         </div>

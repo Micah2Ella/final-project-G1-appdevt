@@ -1,16 +1,21 @@
+// Game.jsx
 import { useRef, useState, useEffect } from "react";
 import Dungeon from "./Dungeon";
+import Combat from "./Combat";
 import "../App.css";
 import "./GameOver.css";
 import { usePlayerHealth } from "../context/PlayerHealth";
 import { usePlayerStats } from "../context/PlayerStats";
 
-export default function Game({ player, onReset, onBattle }) {
+export default function Game({ player, onReset }) {
   const dungeonRef = useRef();
   const { stats, upgrade } = usePlayerStats();
 
   // 🔥 BGM
   const bgmRef = useRef(null);
+
+  const [mode, setMode] = useState("dungeon"); // 'dungeon' | 'combat'
+  const [combatEnemy, setCombatEnemy] = useState(null);
 
   const [encounter, setEncounter] = useState(null);
   const [intro, setIntro] = useState(true);
@@ -23,7 +28,7 @@ export default function Game({ player, onReset, onBattle }) {
   // 🔊 ONLY ONE MUSIC FILE NOW
   const dungeonMusic = "/music/Dungeon.m4a";
 
-  // 🔊 ALWAYS PLAY DUNGEON MUSIC
+  // 🔊 ALWAYS PLAY DUNGEON MUSIC (switch/resume helper)
   const swapMusic = () => {
     if (!bgmRef.current) return;
     if (bgmRef.current.src.includes(dungeonMusic)) return;
@@ -33,13 +38,46 @@ export default function Game({ player, onReset, onBattle }) {
     bgmRef.current.play().catch(() => {});
   };
 
+  // START combat overlay: pause dungeon & music
+  const startCombat = (enemyType) => {
+    setCombatEnemy(enemyType);
+    setMode("combat");
+    setEncounter(null);
+    setIsProcessing(false);
+
+    if (dungeonRef.current && typeof dungeonRef.current.pause === "function") {
+      try {
+        dungeonRef.current.pause();
+      } catch (e) {}
+    }
+
+    if (bgmRef.current) {
+      try {
+        bgmRef.current.pause();
+      } catch (e) {}
+    }
+  };
+
+  // END combat overlay: resume dungeon & music
+  const endCombat = () => {
+    setCombatEnemy(null);
+    setMode("dungeon");
+    // resume music
+    swapMusic();
+    if (dungeonRef.current && typeof dungeonRef.current.resume === "function") {
+      try {
+        dungeonRef.current.resume();
+      } catch (e) {}
+    }
+  };
+
   const handleEncounter = (type) => {
     console.log("Encounter triggered:", type);
     setEncounter(type);
     setIsProcessing(false);
 
-    // 🎵 ALWAYS keep dungeon music
-    swapMusic();
+    // ensure dungeon music is playing if not in combat
+    if (mode === "dungeon") swapMusic();
   };
 
   const handleCrossroadsChoice = (choices) => {
@@ -51,7 +89,9 @@ export default function Game({ player, onReset, onBattle }) {
     if (isProcessing) return;
 
     setIsProcessing(true);
-    dungeonRef.current.setMysteryType(chosenType);
+    if (dungeonRef.current && typeof dungeonRef.current.setMysteryType === "function") {
+      dungeonRef.current.setMysteryType(chosenType);
+    }
     setCrossroadsChoices(null);
     handleExitEncounter();
   };
@@ -70,8 +110,12 @@ export default function Game({ player, onReset, onBattle }) {
     console.log("Encounter ended!");
     setEncounter(null);
 
-    swapMusic(); // keep dungeon music
-    dungeonRef.current.resume();
+    // keep dungeon music (unless we immediately start combat)
+    if (mode === "dungeon") swapMusic();
+    if (dungeonRef.current && typeof dungeonRef.current.resume === "function") {
+      dungeonRef.current.resume();
+    }
+    setIsProcessing(false);
   };
 
   const handleUpgrade = (stat) => {
@@ -82,10 +126,16 @@ export default function Game({ player, onReset, onBattle }) {
     upgrade(stat);
 
     setTimeout(() => {
-      dungeonRef.current.regenerateEncounters();
-      dungeonRef.current.removeAethercrest();
+      if (dungeonRef.current && typeof dungeonRef.current.regenerateEncounters === "function") {
+        dungeonRef.current.regenerateEncounters();
+      }
+      if (dungeonRef.current && typeof dungeonRef.current.removeAethercrest === "function") {
+        dungeonRef.current.removeAethercrest();
+      }
       setEncounter(null);
-      dungeonRef.current.resume();
+      if (dungeonRef.current && typeof dungeonRef.current.resume === "function") {
+        dungeonRef.current.resume();
+      }
       setAethercrestCount((prev) => prev + 1);
       setIsProcessing(false);
       swapMusic();
@@ -97,10 +147,10 @@ export default function Game({ player, onReset, onBattle }) {
     return () => clearTimeout(timer);
   }, []);
 
-  // 🔥 Autoplay fix
+  // 🔥 Autoplay fix for dungeon music
   useEffect(() => {
     const startMusic = () => {
-      if (bgmRef.current) {
+      if (bgmRef.current && mode === "dungeon") {
         bgmRef.current.volume = 0.5;
         bgmRef.current.play().catch(() => {});
       }
@@ -108,7 +158,7 @@ export default function Game({ player, onReset, onBattle }) {
     };
     window.addEventListener("click", startMusic);
     return () => window.removeEventListener("click", startMusic);
-  }, []);
+  }, [mode]);
 
   // 🔥 Pause on game over
   useEffect(() => {
@@ -117,20 +167,23 @@ export default function Game({ player, onReset, onBattle }) {
       setGameOver(true);
       setAethercrestCount(0);
 
-      if (dungeonRef.current) dungeonRef.current.pause();
+      if (dungeonRef.current && typeof dungeonRef.current.pause === "function") {
+        dungeonRef.current.pause();
+      }
       if (bgmRef.current) bgmRef.current.pause();
 
       setEncounter(null);
+      // keep mode as dungeon but show gameOver UI
     }
   }, [hp]);
 
-  // 🔥 Resume dungeon music after reset
+  // 🔥 Resume dungeon music after reset or after exiting combat
   useEffect(() => {
-    if (!gameOver && bgmRef.current) {
+    if (!gameOver && bgmRef.current && mode === "dungeon") {
       swapMusic();
       bgmRef.current.play().catch(() => {});
     }
-  }, [gameOver]);
+  }, [gameOver, mode]);
 
   return (
     <div
@@ -144,11 +197,13 @@ export default function Game({ player, onReset, onBattle }) {
       <audio ref={bgmRef} src={dungeonMusic} loop />
 
       <div className="dungeon-wrapper">
+        {/* Dungeon is always mounted and preserved */}
         <Dungeon
           ref={dungeonRef}
           onEncounter={handleEncounter}
           onCrossroadsChoice={handleCrossroadsChoice}
           player={player}
+          onStartCombat={startCombat} // in case your Dungeon wants to trigger combat directly
         />
       </div>
 
@@ -181,13 +236,16 @@ export default function Game({ player, onReset, onBattle }) {
         {gameOver && (
           <div className="game-over">
             <div>
-              <img src="/characters/player_death.png" />
+              <img src="/characters/player_death.png" alt="death" />
               <h1>💀 YOU DIED 💀</h1>
               <p>
-                HP: {hp} | ATK: {stats.ATATK} | SPD: {stats.SPD} | DEF: {stats.DEF}
+                HP: {hp} | ATK: {stats.ATK} | SPD: {stats.SPD} | DEF: {stats.DEF}
               </p>
               <button
-                onClick={onReset}
+                onClick={() => {
+                  // Reset flow: call parent onReset to go back to character select
+                  onReset?.();
+                }}
                 disabled={isProcessing}
                 style={{
                   opacity: isProcessing ? 0.5 : 1,
@@ -225,19 +283,18 @@ export default function Game({ player, onReset, onBattle }) {
               </div>
             )}
 
-            {/* ⭐ Always dungeon music */}
             {encounter === "bat1" && (
               <div className="UI">
                 <h3>NORMAL BAT ENCOUNTER</h3>
                 <p>You face a bat.</p>
                 <button
                   onClick={() => {
-                    swapMusic();
-                    onBattle("bat1");
+                    // Start combat overlay inside Game (dungeon music will be paused)
+                    startCombat("bat1");
                   }}
                   disabled={isProcessing}
                 >
-                  {isProcessing ? "Processing..." : "Continue"}
+                  {isProcessing ? "Processing..." : "Fight"}
                 </button>
               </div>
             )}
@@ -248,12 +305,11 @@ export default function Game({ player, onReset, onBattle }) {
                 <p>You face a strong bat.</p>
                 <button
                   onClick={() => {
-                    swapMusic();
-                    onBattle("bat2");
+                    startCombat("bat2");
                   }}
                   disabled={isProcessing}
                 >
-                  {isProcessing ? "Processing..." : "Continue"}
+                  {isProcessing ? "Processing..." : "Fight"}
                 </button>
               </div>
             )}
@@ -310,6 +366,31 @@ export default function Game({ player, onReset, onBattle }) {
           </div>
         </div>
       </div>
+
+      {/* ----------------- COMBAT OVERLAY ----------------- */}
+      {mode === "combat" && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 50,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <Combat
+            player={player}
+            enemyType={combatEnemy}
+            onExitCombat={() => {
+              // Called by Combat when finished/defeated
+              endCombat();
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
