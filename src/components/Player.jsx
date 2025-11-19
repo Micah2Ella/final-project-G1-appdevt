@@ -10,10 +10,10 @@ export default function({ isPaused, player }) {
 
     const height =
         player?.name === "Rogue"
-            ? 248
+            ? 345
             : player?.name === "Barbarian"
-            ? 278
-            : 168
+            ? 345
+            : 345
 
     return (
         <img 
@@ -22,7 +22,7 @@ export default function({ isPaused, player }) {
             className={!isPaused ? "run" : ""}
             style={{
                 position: "absolute",
-                bottom: "0px",
+                bottom: "15px",
                 left: "35%",
                 transform: "translateX(-50%)",
                 width: "auto",

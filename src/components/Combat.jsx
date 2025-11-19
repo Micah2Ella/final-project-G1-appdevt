@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Battle from "./Battle";
 import { usePlayerHealth } from "../context/PlayerHealth";
+import { usePlayerStats } from "../context/PlayerStats";
 
 export default function Combat({ player, enemyType, onExitCombat }) {
   const bgmRef = useRef(null);
@@ -8,10 +9,14 @@ export default function Combat({ player, enemyType, onExitCombat }) {
   // 🌟 REAL HP SYSTEM FROM CONTEXT
   const { hp: playerHp, takeDamage } = usePlayerHealth();
 
+  // Stats System from context
+  const { stats } = usePlayerStats();
+
   const [enemyHp, setEnemyHp] = useState(enemyType === "bat1" ? 200 : 300);
   const [phase, setPhase] = useState("playerTurn");
   const [showFightMenu, setShowFightMenu] = useState(false);
   const [showHitEffect, setShowHitEffect] = useState(false);
+  const [showMissEffect, setShowMissEffect] = useState(false);
   const [defendNextRound, setDefendNextRound] = useState(false);
 
   // ⭐ Battle Instance Key so React does NOT remount Battle repeatedly
@@ -37,10 +42,10 @@ export default function Combat({ player, enemyType, onExitCombat }) {
   // 🪓 Attack Logic
   const performAttack = (type) => {
     let dmg = 0;
-    const atk = player.baseStats?.ATK || 30;
+    const atk = stats.ATK || 30;
 
-    if (type === "normal") dmg = Math.floor(atk / 2);
-    else if (type === "strong" && Math.random() < 0.5) dmg = atk;
+    if (type === "normal") dmg = atk;
+    else if (type === "strong" && Math.random() < 0.30) dmg = Math.floor(atk * 2);
 
     if (dmg > 0) {
       setShowHitEffect(true);
@@ -52,8 +57,12 @@ export default function Combat({ player, enemyType, onExitCombat }) {
         startBattleHell();
       }, 850);
     } else {
-      setShowFightMenu(false);
-      startBattleHell();
+      setShowMissEffect(true);
+
+      setTimeout(() => {
+        setShowMissEffect(false);
+        startBattleHell();
+      }, 850);
     }
   };
 
@@ -84,12 +93,17 @@ export default function Combat({ player, enemyType, onExitCombat }) {
 
   // 🟦 Battle ends → apply real damage + return to player turn
   const endBattleHell = (damageTaken) => {
-    takeDamage(damageTaken); // use real HP system
+    const mitigated = Math.max(1, damageTaken - Math.floor(stats.DEF / 5));
+    takeDamage(mitigated);
     setDefendNextRound(false);
     setPhase("playerTurn");
   };
 
   const bulletDamage = enemyType === "bat1" ? 5 : 10;
+  const finalBulletDamage = Math.max(1, bulletDamage - Math.floor(stats.DEF / 10));
+
+  // read if bullet hell
+  const isBulletHell = phase === "bulletHell";
 
   return (
     <div
@@ -107,13 +121,29 @@ export default function Combat({ player, enemyType, onExitCombat }) {
       <audio ref={bgmRef} loop />
 
       {/* Player HP */}
-      <div style={{ position: "absolute", bottom: 20, left: 20 }}>
-        <h2>Player HP: {playerHp}</h2>
+      <div style={{
+        position: "absolute",
+        bottom: 20,
+        left: 130, 
+        display: "grid", 
+        gridTemplateColumns: "1fr 1fr 1fr 1fr", 
+        gap: "30px",
+        animation: "playerIdle 3s ease-in-out infinite",
+      }}>
+        <h2>❤️{playerHp}</h2>
+        <h2>🗡️{stats.ATK}</h2>
+        <h2>👟{stats.SPD}</h2>
+        <h2>🛡️{stats.DEF}</h2>
       </div>
 
       {/* Enemy HP */}
-      <div style={{ position: "absolute", top: 20, right: 20 }}>
-        <h2>Enemy HP: {enemyHp}</h2>
+      <div style={{
+        position: "absolute",
+        top: 30,
+        right: 260,
+        animation: "batFloat 2.5s ease-in-out infinite",
+      }}>
+        <h2>💜{enemyHp}</h2>
       </div>
 
       {/* Player Sprite */}
@@ -127,6 +157,9 @@ export default function Combat({ player, enemyType, onExitCombat }) {
           imageRendering: "pixelated",
           filter: "drop-shadow(0px 0px 25px black)",
           animation: "playerIdle 3s ease-in-out infinite",
+
+          opacity: isBulletHell ? 0.1 : 1,
+          transition: "transform 0.5s ease, opacity 0.5s ease",
         }}
       />
 
@@ -145,6 +178,9 @@ export default function Combat({ player, enemyType, onExitCombat }) {
           imageRendering: "pixelated",
           filter: "drop-shadow(0px 0px 25px black)",
           animation: "batFloat 2.5s ease-in-out infinite",
+
+          opacity: isBulletHell ? 0.1 : 1,
+          transition: "transform 0.5s ease, opacity 0.5s ease",
         }}
       />
 
@@ -154,11 +190,24 @@ export default function Combat({ player, enemyType, onExitCombat }) {
           src="/effect/AttackLanding.png"
           style={{
             position: "absolute",
-            top: 180,
-            right: 200,
+            top: 130,
+            right: 230,
             height: 250,
             imageRendering: "pixelated",
-            animation: "hitPop 0.3s ease-out",
+            animation: "hitPop 0.3s ease-out forwards",
+          }}
+        />
+      )}
+      {showMissEffect && (
+        <img
+          src="/effect/AttackMissing.png"
+          style={{
+            position: "absolute",
+            top: 130,
+            right: 230,
+            height: 250,
+            imageRendering: "pixelated",
+            animation: "missPop 0.3s ease-out forwards",
           }}
         />
       )}
@@ -197,10 +246,10 @@ export default function Combat({ player, enemyType, onExitCombat }) {
       {showFightMenu && (
         <div style={fightMenuStyle}>
           <button onClick={() => performAttack("normal")}>
-            Normal Attack (Always Lands, Half DMG)
+            Normal Attack (Always Lands, Base DMG)
           </button>
           <button onClick={() => performAttack("strong")}>
-            Strong Attack (50% Miss Chance, Full DMG)
+            Strong Attack (30% Chance, Double DMG)
           </button>
           <button onClick={() => setShowFightMenu(false)}>Cancel</button>
         </div>
@@ -211,9 +260,10 @@ export default function Combat({ player, enemyType, onExitCombat }) {
         <Battle
           key={battleKey}              // ← Makes sure timer runs EXACTLY 10 seconds
           duration={10000}
-          bulletDamage={bulletDamage}
+          bulletDamage={finalBulletDamage}
           defendActive={defendNextRound}
           playerClass={player.name}
+          enemyType={enemyType}
           onEnd={endBattleHell}
         />
       )}

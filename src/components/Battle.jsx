@@ -10,6 +10,7 @@ export default function Battle({
   bulletDamage = 5,
   defendActive = false,
   playerClass = "",
+  enemyType = "bat1",
   onEnd,
 }) {
   const canvasRef = useRef(null);
@@ -21,6 +22,12 @@ export default function Battle({
     speed: 2.5,
   });
 
+  const spawnOrigin = useRef({
+    x: CANVAS_WIDTH / 2,
+    y: CANVAS_HEIGHT / 3,
+    t: 0,
+  })
+
   // ⭕ Read player HP ONCE only
   const { hp: globalHp, takeDamage } = usePlayerHealth();
   const startingHpRef = useRef(globalHp);
@@ -31,6 +38,10 @@ export default function Battle({
   // ⭐ Rogue slower bullets
   const isRogue = playerClass.toLowerCase() === "rogue";
   const bulletSpeedMultiplier = isRogue ? 0.6 : 1;
+
+  const isBat2 = enemyType === "bat2";
+  const enemySpeedMultiplier = isBat2 ? 1.4 : 1;
+  const finalBulletSpeedMultiplier = bulletSpeedMultiplier * enemySpeedMultiplier;
 
   const updatePlayer = () => {
     const p = player.current;
@@ -44,14 +55,21 @@ export default function Battle({
   };
 
   const spawnBullet = () => {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = (2 + Math.random() * 2) * bulletSpeedMultiplier;
+    const p = player.current;
+    const origin = spawnOrigin.current;
+
+    const dx = p.x - origin.x;
+    const dy = p.y - origin.y;
+    const distance = Math.hypot(dx, dy);
+
+    // Normalize direction + apply speed multipliers
+    const speed = 3 * finalBulletSpeedMultiplier;
 
     bullets.current.push({
-      x: CANVAS_WIDTH / 2,
-      y: CANVAS_HEIGHT / 3,
-      dx: Math.cos(angle) * speed,
-      dy: Math.sin(angle) * speed,
+      x: origin.x,
+      y: origin.y,
+      dx: (dx / distance) * speed,
+      dy: (dy / distance) * speed,
       size: 8,
     });
   };
@@ -102,6 +120,15 @@ export default function Battle({
 
   const loop = () => {
     const ctx = canvasRef.current.getContext("2d");
+
+    // Attack Pattern
+    spawnOrigin.current.t += 0.03;
+    spawnOrigin.current.x =
+      CANVAS_WIDTH / 2 + Math.sin(spawnOrigin.current.t) * 400;
+
+    spawnOrigin.current.y =
+      CANVAS_HEIGHT / 8 + Math.sin(spawnOrigin.current.t * 4) * 30;
+
     updatePlayer();
     updateBullets();
     draw(ctx);
