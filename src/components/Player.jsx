@@ -4,7 +4,7 @@ export default function({ isPaused, player }) {
     const charKey = player?.name?.toLowerCase();
 
     const idleSprite = `/characters/${charKey}-idle.png`;
-    const runSprite = "/characters/player_run.png";
+    const runSprite = `/characters/${charKey}-run.png`;
 
     const sprite = isPaused ? idleSprite : runSprite;
 
