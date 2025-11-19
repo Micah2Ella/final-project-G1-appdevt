@@ -1,273 +1,182 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { usePlayerHealth } from '../context/PlayerHealth';
+import React, { useEffect, useRef, useState } from "react";
 
-// Define canvas constants outside the component so they don't change on re-render
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
-const MAX_HP = 20;
+
 const PLAYER_SIZE = 20;
+const MAX_HP = 50;
 
-// You'll need to make sure this image file is accessible in your public folder
-// or imported correctly if using the src folder structure.
-const PLAYER_IMAGE_SRC = "determination.png";
-
-// Initial player state
-const initialPlayer = {
-  x: CANVAS_WIDTH / 2,
-  y: CANVAS_HEIGHT - 100,
-  size: PLAYER_SIZE,
-  speed: 5,
-  hp: MAX_HP,
-  maxHp: MAX_HP,
-};
-
-// export default function BulletHellGame({player}) {
-export default function BulletHellGame() {
-  const [player, setPlayer] = useState(initialPlayer);
-  const [bullets, setBullets] = useState([]);
-  const [keys, setKeys] = useState({});
-  // const { hp, takeDamage, heal } = usePlayerHealth();
-  // const MAX_HP = hp;
-
-  // const initialPlayer = {
-  //   x: CANVAS_WIDTH / 2,
-  //   y: CANVAS_HEIGHT - 100,
-  //   size: PLAYER_SIZE,
-  //   speed: 5,
-  //   hp: MAX_HP,
-  //   maxHp: MAX_HP,
-  // };
-
-  // Refs for DOM elements and game loop IDs
+export default function Battle({ duration = 10000, onEnd }) {
   const canvasRef = useRef(null);
-  const animationFrameRef = useRef(null);
-  const bulletIntervalRef = useRef(null);
-  const playerImageRef = useRef(new Image()); // Ref to hold the Image object
+  const keys = useRef({});
+  const bullets = useRef([]);
+  const player = useRef({
+    x: CANVAS_WIDTH / 2,
+    y: CANVAS_HEIGHT - 100,
+    speed: 2.5,
+  });
 
-  // --- Health Bar UI Logic (Uses React State directly) ---
+  const [hp, setHp] = useState(MAX_HP);
 
-  const hpPercent = (player.hp / player.maxHp) * 100;
-  let hpBarColor = 'lime';
-  if (hpPercent < 30) {
-    hpBarColor = 'red';
-  } else if (hpPercent < 60) {
-    hpBarColor = 'orange';
-  }
+  const lastTime = useRef(0);
 
-  // --- Game Loop Functions (Use useCallback for stability) ---
+  // ---------------- PLAYER MOVEMENT ----------------
+  const updatePlayer = () => {
+    const p = player.current;
 
-  const spawnBullet = useCallback(() => {
+    if (keys.current["W"]) p.y -= p.speed;
+    if (keys.current["S"]) p.y += p.speed;
+    if (keys.current["A"]) p.x -= p.speed;
+    if (keys.current["D"]) p.x += p.speed;
+
+    p.x = Math.max(PLAYER_SIZE, Math.min(CANVAS_WIDTH - PLAYER_SIZE, p.x));
+    p.y = Math.max(PLAYER_SIZE, Math.min(CANVAS_HEIGHT - PLAYER_SIZE, p.y));
+  };
+
+  // ---------------- BULLETS ----------------
+  const spawnBullet = () => {
     const angle = Math.random() * Math.PI * 2;
     const speed = 2 + Math.random() * 2;
-    
-    // Use the functional update to ensure we have the latest bullets state
-    setBullets(prevBullets => [
-      ...prevBullets,
-      {
-        x: CANVAS_WIDTH / 2,
-        y: CANVAS_HEIGHT / 3,
-        dx: Math.cos(angle) * speed,
-        dy: Math.sin(angle) * speed,
-        size: 5,
-      },
-    ]);
+
+    bullets.current.push({
+      x: CANVAS_WIDTH / 2,
+      y: CANVAS_HEIGHT / 3,
+      dx: Math.cos(angle) * speed,
+      dy: Math.sin(angle) * speed,
+      size: 8,
+    });
+  };
+
+  const updateBullets = () => {
+    const p = player.current;
+
+    bullets.current = bullets.current.filter((b) => {
+      b.x += b.dx;
+      b.y += b.dy;
+
+      const dx = b.x - p.x;
+      const dy = b.y - p.y;
+      if (Math.sqrt(dx * dx + dy * dy) < b.size + PLAYER_SIZE) {
+        // Player hit → lose HP
+        setHp((h) => Math.max(h - 1, 0));
+        return false;
+      }
+
+      return (
+        b.x >= -50 &&
+        b.x <= CANVAS_WIDTH + 50 &&
+        b.y >= -50 &&
+        b.y <= CANVAS_HEIGHT + 50
+      );
+    });
+  };
+
+  // ---------------- DRAW ----------------
+  const draw = (ctx) => {
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // Player
+    ctx.fillStyle = "yellow";
+    ctx.beginPath();
+    ctx.arc(player.current.x, player.current.y, PLAYER_SIZE, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bullets
+    ctx.fillStyle = "red";
+    bullets.current.forEach((b) => {
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  };
+
+  // ---------------- GAME LOOP ----------------
+  const gameLoop = (timestamp) => {
+    lastTime.current = timestamp;
+    const ctx = canvasRef.current.getContext("2d");
+
+    updatePlayer();
+    updateBullets();
+    draw(ctx);
+
+    requestAnimationFrame(gameLoop);
+  };
+
+  // ---------------- LIFECYCLE ----------------
+  useEffect(() => {
+    const down = (e) => (keys.current[e.key.toUpperCase()] = true);
+    const up = (e) => (keys.current[e.key.toUpperCase()] = false);
+
+    document.addEventListener("keydown", down);
+    document.addEventListener("keyup", up);
+
+    requestAnimationFrame(gameLoop);
+
+    const interval = setInterval(spawnBullet, 120);
+
+    // ⏳ END BATTLE AFTER 30 SECONDS
+    const timer = setTimeout(() => {
+      const damageTaken = MAX_HP - hp;
+      onEnd(damageTaken);   // ← sends damage back to Combat.jsx
+    }, duration);
+
+    return () => {
+      document.removeEventListener("keydown", down);
+      document.removeEventListener("keyup", up);
+      clearInterval(interval);
+      clearTimeout(timer);
+    };
   }, []);
 
-  // The main game update/draw loop
-  const update = useCallback(() => {
-    setPlayer(prevPlayer => {
-      // Create a copy of the player state to modify
-      let newPlayer = { ...prevPlayer };
-      
-      // 1. Movement (WASD)
-      if (keys['A']) newPlayer.x -= newPlayer.speed;
-      if (keys['D']) newPlayer.x += newPlayer.speed;
-      if (keys['W']) newPlayer.y -= newPlayer.speed;
-      if (keys['S']) newPlayer.y += newPlayer.speed;
+  // ---------------- HP BAR ----------------
+  const hpPercent = (hp / MAX_HP) * 100;
 
-      // 2. Boundaries
-      newPlayer.x = Math.max(newPlayer.size, Math.min(CANVAS_WIDTH - newPlayer.size, newPlayer.x));
-      newPlayer.y = Math.max(newPlayer.size, Math.min(CANVAS_HEIGHT - newPlayer.size, newPlayer.y));
-
-      return newPlayer;
-    });
-
-    setBullets(prevBullets => {
-      let newBullets = prevBullets.map(b => ({
-        ...b,
-        // 3. Move bullets
-        x: b.x + b.dx,
-        y: b.y + b.dy,
-      }));
-
-      let playerHit = false;
-
-      // 4. Collision detection & HP check
-      for (let i = 0; i < newBullets.length; i++) {
-        const b = newBullets[i];
-        const dx = b.x - player.x; // Use player from closure (should be current state)
-        const dy = b.y - player.y;
-
-        if (Math.sqrt(dx * dx + dy * dy) < b.size + player.size) {
-          playerHit = true;
-          // Remove the bullet from the screen by moving it off-canvas
-          b.x = -999; 
-          b.y = -999;
-          break; // Process one hit per frame for simplicity
-        }
-      }
-
-      // 5. Apply damage and check for game over
-      if (playerHit) {
-        setPlayer(prevPlayer => {
-          let newHP = Math.max(0, prevPlayer.hp - 1);
-          if (newHP === 0) {
-            // Game Over logic
-            clearInterval(bulletIntervalRef.current);
-            cancelAnimationFrame(animationFrameRef.current);
-            alert("You lost all health! Reloading...");
-            document.location.reload(); 
-          }
-          return { ...prevPlayer, hp: newHP };
-        });
-      }
-
-      // 6. Draw (Rendering)
-      const ctx = canvasRef.current.getContext("2d");
-      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-      // Draw player
-      const playerImg = playerImageRef.current;
-      if (playerImg.complete) {
-        ctx.drawImage(playerImg, player.x - 20, player.y - 20, 40, 40);
-      } else {
-        ctx.fillStyle = "yellow";
-        ctx.beginPath();
-        ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // Draw bullets
-      ctx.fillStyle = "red";
-      for (const b of newBullets) {
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      
-      return newBullets;
-    });
-
-    animationFrameRef.current = requestAnimationFrame(update);
-  }, [keys, player.x, player.y]); // Include player coords in dependency array
-
-  // --- useEffect Hooks for Setup and Cleanup ---
-
-  useEffect(() => {
-    const playerImg = playerImageRef.current;
-    playerImg.src = PLAYER_IMAGE_SRC;
-
-    const handleKeyDown = (e) => {
-      setKeys(prevKeys => ({ ...prevKeys, [e.key.toUpperCase()]: true }));
-    };
-
-    const handleKeyUp = (e) => {
-      setKeys(prevKeys => ({ ...prevKeys, [e.key.toUpperCase()]: false }));
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("keyup", handleKeyUp);
-
-    // Image load and game start logic
-    playerImg.onload = () => {
-      bulletIntervalRef.current = setInterval(spawnBullet, 100);
-      animationFrameRef.current = requestAnimationFrame(update);
-    };
-    
-    // Cleanup function: remove event listeners and stop loops
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("keyup", handleKeyUp);
-      clearInterval(bulletIntervalRef.current);
-      cancelAnimationFrame(animationFrameRef.current);
-    };
-  }, [spawnBullet, update]); // Dependencies: game loop functions
-
-  // --- Rendered JSX (HTML Structure) ---
-  
   return (
-    <div className="game-container">
-      <canvas 
-        id="game" 
-        ref={canvasRef} 
-        width={CANVAS_WIDTH} 
+    <div
+      className="game-container"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100vh",
+        width: "100vw",
+        background: "black",
+        position: "relative",
+      }}
+    >
+
+      <canvas
+        ref={canvasRef}
+        width={CANVAS_WIDTH}
         height={CANVAS_HEIGHT}
+        style={{ border: "2px solid white", background: "#111" }}
       />
 
-      <div id="hpContainer">
-        <div id="hpText">HP {player.hp} / {player.maxHp}</div>
-        <div id="hpBarBackground">
-          <div 
-            id="hpBar" 
-            style={{ 
-              width: `${hpPercent}%`, 
-              backgroundColor: hpBarColor 
+      <div style={{ width: CANVAS_WIDTH, marginTop: 20, textAlign: "center" }}>
+        <div style={{ marginBottom: 5, fontSize: 20, color: "white", fontFamily: "Retro Gaming" }}>
+          HP {hp} / {MAX_HP}
+        </div>
+        <div
+          style={{
+            background: "#333",
+            height: 20,
+            border: "2px solid white",
+            borderRadius: 5,
+          }}
+        >
+          <div
+            style={{
+              width: `${hpPercent}%`,
+              height: "100%",
+              background:
+                hpPercent < 30 ? "red" : hpPercent < 60 ? "orange" : "#304d6d",
+              borderRadius: 3,
+              transition: "width 0.3s, background-color 0.3s",
             }}
-          ></div>
+          />
         </div>
       </div>
-
-      {/* --- Styled-JSX or CSS Module equivalent for original styles --- */}
-      <style jsx global>{`
-        /* Global styles applied to the body */
-        body {
-          margin: 0;
-          background: black;
-          color: white;
-          font-family: "Courier New", monospace;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          height: 100vh;
-        }
-      `}</style>
-      <style jsx>{`
-        /* Component specific styles */
-        canvas {
-          background: #111;
-          border: 2px solid white;
-          display: block;
-        }
-
-        #hpContainer {
-          margin-top: 20px;
-          text-align: center;
-          width: ${CANVAS_WIDTH}px;
-        }
-
-        #hpText {
-          font-size: 20px;
-          color: yellow;
-          margin-bottom: 5px;
-        }
-
-        #hpBarBackground {
-          width: 100%;
-          height: 20px;
-          background: #333;
-          border: 2px solid white;
-          border-radius: 5px;
-        }
-
-        #hpBar {
-          height: 100%;
-          width: 100%; /* Will be overridden by inline style */
-          background: lime; /* Will be overridden by inline style */
-          border-radius: 3px;
-          transition: width 0.3s, background-color 0.3s;
-        }
-      `}</style>
     </div>
   );
 }
