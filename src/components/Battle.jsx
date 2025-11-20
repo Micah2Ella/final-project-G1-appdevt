@@ -19,7 +19,7 @@ export default function Battle({
   const player = useRef({
     x: CANVAS_WIDTH / 2,
     y: CANVAS_HEIGHT - 100,
-    speed: 2.5,
+    speed: 5,
   });
 
   const spawnOrigin = useRef({
@@ -28,27 +28,36 @@ export default function Battle({
     t: 0,
   })
 
-  // ⭕ Read player HP ONCE only
-  const { hp: globalHp, takeDamage } = usePlayerHealth();
-  const startingHpRef = useRef(globalHp);
+  const playerImg = useRef(new Image());
+  const bulletImg = useRef(new Image());
 
-  // ⭕ Local battle HP that does NOT reset global HP
-  const [tempHp, setTempHp] = useState(startingHpRef.current);
+  useEffect(() => {
+    playerImg.current.onload = () => console.log("player loaded", playerImg.current.width, playerImg.current.height);
+    bulletImg.current.onload = () => console.log("bullet loaded", bulletImg.current.width, bulletImg.current.height);
+
+    playerImg.current.src = `/effect/${playerClass.toLowerCase()}-icon.png`;
+    bulletImg.current.src = "/effect/bullet.png";
+  }, [playerClass]);
+
+  const { hp: globalHp, takeDamage } = usePlayerHealth();
+  const [tempHp, setTempHp] = useState(globalHp);
 
   // ⭐ Rogue slower bullets
   const isRogue = playerClass.toLowerCase() === "rogue";
   const bulletSpeedMultiplier = isRogue ? 0.6 : 1;
 
   const isBat2 = enemyType === "bat2";
-  const enemySpeedMultiplier = isBat2 ? 1.4 : 1;
+  const enemySpeedMultiplier = isBat2 ? 2.2 : 1.8;
   const finalBulletSpeedMultiplier = bulletSpeedMultiplier * enemySpeedMultiplier;
 
-  const updatePlayer = () => {
+  const updatePlayer = (dt) => {
     const p = player.current;
-    if (keys.current["W"]) p.y -= p.speed;
-    if (keys.current["S"]) p.y += p.speed;
-    if (keys.current["A"]) p.x -= p.speed;
-    if (keys.current["D"]) p.x += p.speed;
+    const speed = p.speed * dt;
+
+    if (keys.current["W"]) p.y -= speed;
+    if (keys.current["S"]) p.y += speed;
+    if (keys.current["A"]) p.x -= speed;
+    if (keys.current["D"]) p.x += speed;
 
     p.x = Math.max(PLAYER_SIZE, Math.min(CANVAS_WIDTH - PLAYER_SIZE, p.x));
     p.y = Math.max(PLAYER_SIZE, Math.min(CANVAS_HEIGHT - PLAYER_SIZE, p.y));
@@ -64,29 +73,32 @@ export default function Battle({
 
     // Normalize direction + apply speed multipliers
     const speed = 3 * finalBulletSpeedMultiplier;
+    const angle = Math.atan2(dy, dx);
 
     bullets.current.push({
       x: origin.x,
       y: origin.y,
       dx: (dx / distance) * speed,
       dy: (dy / distance) * speed,
+      angle,
       size: 8,
     });
   };
 
-  const updateBullets = () => {
+  const updateBullets = (dt) => {
     const p = player.current;
     const dmgMultiplier = defendActive ? 0.5 : 1;
 
     bullets.current = bullets.current.filter((b) => {
-      b.x += b.dx;
-      b.y += b.dy;
+      b.x += b.dx * dt;
+      b.y += b.dy * dt;
 
       const dx = b.x - p.x;
       const dy = b.y - p.y;
 
       if (Math.sqrt(dx * dx + dy * dy) < b.size + PLAYER_SIZE) {
         const actualDamage = Math.floor(bulletDamage * dmgMultiplier);
+        takeDamage(actualDamage)
         setTempHp((h) => Math.max(h - actualDamage, 0));
         return false;
       }
@@ -100,37 +112,73 @@ export default function Battle({
     });
   };
 
-  const draw = (ctx) => {
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-    // Player
-    ctx.fillStyle = "yellow";
-    ctx.beginPath();
-    ctx.arc(player.current.x, player.current.y, PLAYER_SIZE, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Bullets
-    ctx.fillStyle = "red";
-    bullets.current.forEach((b) => {
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
-      ctx.fill();
-    });
-  };
-
-  const loop = () => {
-    const ctx = canvasRef.current.getContext("2d");
-
+  const updateSpawn = (dt) => {
     // Attack Pattern
-    spawnOrigin.current.t += 0.03;
+    spawnOrigin.current.t += 0.03 * dt;
     spawnOrigin.current.x =
       CANVAS_WIDTH / 2 + Math.sin(spawnOrigin.current.t) * 400;
 
     spawnOrigin.current.y =
-      CANVAS_HEIGHT / 8 + Math.sin(spawnOrigin.current.t * 4) * 30;
+      CANVAS_HEIGHT / 8 + Math.sin(spawnOrigin.current.t * 20) * 30;
+  };
 
-    updatePlayer();
-    updateBullets();
+  const draw = (ctx) => {
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    const bulletScale = 0.3;
+    const playerScale = 0.4;
+
+    // Player
+    const p = player.current;
+    const pw = playerImg.current.width;
+    const ph = playerImg.current.height;
+
+    ctx.drawImage(
+      playerImg.current,
+      p.x - (pw * playerScale) / 2,
+      p.y - (ph * playerScale) / 2,
+      pw * playerScale,
+      ph * playerScale
+    );
+
+    // Bullets
+    const bw = bulletImg.current.width;
+    const bh = bulletImg.current.height;
+    const BULLET_ROTATION_OFFSET = -Math.PI / 2;
+
+    bullets.current.forEach((b) => {
+      ctx.save();
+
+      // Move pivot to bullet position
+      ctx.translate(b.x, b.y);
+
+      // Rotate to stored direction
+      ctx.rotate(b.angle + BULLET_ROTATION_OFFSET);
+
+      // Draw centered at pivot
+
+    ctx.drawImage(
+      bulletImg.current,
+      -(bw * bulletScale) / 2,
+      -(bh * bulletScale) / 2,
+      bw * bulletScale,
+      bh * bulletScale
+    );
+
+      ctx.restore();
+    });
+  };
+
+  let lastTime = performance.now();
+
+  const loop = (time) => {
+    const ctx = canvasRef.current.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+    const dt = (time - lastTime) / 16.67;
+    lastTime = time;
+
+    updatePlayer(dt);
+    updateBullets(dt);
+    updateSpawn(dt);
     draw(ctx);
     requestAnimationFrame(loop);
   };
@@ -145,14 +193,9 @@ export default function Battle({
     requestAnimationFrame(loop);
     const interval = setInterval(spawnBullet, 120);
 
-    // ⭕ FINAL FIX: use startingHpRef, NEVER globalHp
+    // ⭕ FINAL FIX: use globalHP
     const timer = setTimeout(() => {
-      const damageTaken = startingHpRef.current - tempHp;
-
-      // Apply final real damage
-      takeDamage(Math.max(0, damageTaken));
-
-      onEnd(Math.max(0, damageTaken));
+      onEnd(0);
     }, duration);
 
     return () => {
@@ -163,7 +206,13 @@ export default function Battle({
     };
   }, []); // NEVER restart
 
-  const hpPercent = (tempHp / startingHpRef.current) * 100;
+  const hpPercent = (tempHp / 100) * 100;
+
+  useEffect(() => {
+    if (globalHp <= 0) {
+      onEnd(0);
+    }
+  }, [globalHp]);
 
   return (
     <div
@@ -194,7 +243,7 @@ export default function Battle({
             fontFamily: "Retro Gaming",
           }}
         >
-          HP {tempHp} / {startingHpRef.current}
+          HP {tempHp} / 100
         </div>
 
         <div
