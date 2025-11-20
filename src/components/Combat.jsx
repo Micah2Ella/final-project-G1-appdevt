@@ -195,7 +195,7 @@ export default function Combat({ player, enemyType, onExitCombat }) {
             position: "absolute",
             bottom: 80,
             left: 40,
-            width: 700,
+            width: "40%",
             imageRendering: "pixelated",
             filter: "drop-shadow(0px 0px 25px black)",
             animation: "playerIdle 3s ease-in-out infinite",
@@ -216,7 +216,7 @@ export default function Combat({ player, enemyType, onExitCombat }) {
             position: "absolute",
             top: 80,
             right: 40,
-            width: 500,
+            width: "30%",
             imageRendering: "pixelated",
             filter: "drop-shadow(0px 0px 25px black)",
             animation: "batFloat 2.5s ease-in-out infinite",
@@ -260,7 +260,7 @@ export default function Combat({ player, enemyType, onExitCombat }) {
             style={{
               position: "absolute",
               bottom: 40,
-              left: 1000,
+              left: "50%",
               display: "flex",
               gap: "20px",
             }}
@@ -346,7 +346,7 @@ const buttonStyle = {
 const fightMenuStyle = {
   position: "absolute",
   bottom: 140,
-  left: 1015,
+  left: "50%",
   border: "2px solid white",
   borderRadius: 10,
   display: "flex",

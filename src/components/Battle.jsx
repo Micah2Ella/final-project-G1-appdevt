@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { usePlayerHealth } from "../context/PlayerHealth";
 
-const CANVAS_WIDTH = 800;
-const CANVAS_HEIGHT = 600;
+const CANVAS_WIDTH = 600;
+const CANVAS_HEIGHT = 430;
 const PLAYER_SIZE = 20;
 
 export default function Battle({
