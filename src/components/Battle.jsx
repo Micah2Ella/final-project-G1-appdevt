@@ -45,9 +45,12 @@ export default function Battle({
   // ⭐ Rogue slower bullets
   const isRogue = playerClass.toLowerCase() === "rogue";
   const bulletSpeedMultiplier = isRogue ? 0.6 : 1;
+  const spawnRate = isRogue ? 160 : 120
+  const wiggle = isRogue ? 100 : 50
 
   const isBat2 = enemyType === "bat2";
   const enemySpeedMultiplier = isBat2 ? 2.2 : 1.8;
+  const enemyPattern = isBat2 ? 500 : 30;
   const finalBulletSpeedMultiplier = bulletSpeedMultiplier * enemySpeedMultiplier;
 
   const updatePlayer = (dt) => {
@@ -115,11 +118,28 @@ export default function Battle({
   const updateSpawn = (dt) => {
     // Attack Pattern
     spawnOrigin.current.t += 0.03 * dt;
-    spawnOrigin.current.x =
-      CANVAS_WIDTH / 2 + Math.sin(spawnOrigin.current.t) * 400;
 
-    spawnOrigin.current.y =
-      CANVAS_HEIGHT / 8 + Math.sin(spawnOrigin.current.t * 20) * 30;
+    if (isBat2) {
+      const radius = 430;
+      
+      if (Math.random() < 0.02) {
+        spawnOrigin.current.jerkX = (Math.random() - 0.5) * 150;
+        spawnOrigin.current.jerkY = (Math.random() - 0.5) * 150;
+      }
+      spawnOrigin.current.jerkX *= 0.95;
+      spawnOrigin.current.jerkY *= 0.95;
+
+      spawnOrigin.current.x = CANVAS_WIDTH / 2 + Math.cos(spawnOrigin.current.t * enemyPattern) * radius + spawnOrigin.current.jerkX;
+      spawnOrigin.current.y = CANVAS_HEIGHT / 2 + Math.sin(spawnOrigin.current.t * enemyPattern) * radius + spawnOrigin.current.jerkY;
+      // spawnOrigin.current.x = CANVAS_WIDTH / 2 + Math.cos(spawnOrigin.current.t * enemyPattern) * radius;
+      // spawnOrigin.current.y = CANVAS_HEIGHT / 2 + Math.sin(spawnOrigin.current.t * enemyPattern) * radius;
+    } else {
+      spawnOrigin.current.x =
+        CANVAS_WIDTH / 2 + Math.sin(spawnOrigin.current.t) * 470;
+
+      spawnOrigin.current.y =
+        CANVAS_HEIGHT / 8 + Math.sin(spawnOrigin.current.t * wiggle) * enemyPattern;
+    }
   };
 
   const draw = (ctx) => {
@@ -191,7 +211,7 @@ export default function Battle({
     document.addEventListener("keyup", up);
 
     requestAnimationFrame(loop);
-    const interval = setInterval(spawnBullet, 120);
+    const interval = setInterval(spawnBullet, spawnRate);
 
     // ⭕ FINAL FIX: use globalHP
     const timer = setTimeout(() => {

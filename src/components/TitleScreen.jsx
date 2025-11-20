@@ -1,40 +1,28 @@
 import React, { useEffect, useRef } from "react";
+import AudioManager from "./AudioManager";
 
 export default function TitleScreen({ onStart, onControls }) {
-  const bgmRef = useRef(null);
-
-  // AUTOPLAY FIX — browser requires user interaction first
-  useEffect(() => {
-    const startMusic = () => {
-      if (bgmRef.current) {
-        bgmRef.current.volume = 0.5;
-        bgmRef.current.play().catch(() => {});
-      }
-      window.removeEventListener("click", startMusic);
-    };
-
-    window.addEventListener("click", startMusic);
-    return () => window.removeEventListener("click", startMusic);
-  }, []);
-
-  // Load the music once when component mounts
-  useEffect(() => {
-    if (bgmRef.current) {
-      bgmRef.current.src = "/music/Title.m4a";
-      bgmRef.current.load();
-    }
-  }, []);
-
   return (
     <div className="title-screen">
-      {/* 🔊 MUSIC */}
-      <audio ref={bgmRef} loop />
-
       <div className="Title">
         <h1>Aethercrest</h1>
 
-        <button onClick={onStart}>START GAME</button><br />
-        <button onClick={onControls}>CONTROLS</button>
+        <button
+          onClick={() => {
+            AudioManager.unlock();
+            AudioManager.play("/music/Title.m4a");
+            onStart();
+          }}
+        >
+          START GAME
+        </button>
+        <br />
+        <button onClick={() => { 
+          AudioManager.unlock();
+          AudioManager.play("/music/Title.m4a");
+          onControls();
+        }}>
+        CONTROLS</button>
       </div>
 
       <div className="Image">

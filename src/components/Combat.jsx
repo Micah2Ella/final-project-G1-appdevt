@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Battle from "./Battle";
 import { usePlayerHealth } from "../context/PlayerHealth";
 import { usePlayerStats } from "../context/PlayerStats";
+import { stopAllMusic } from "./Game";
 
 export default function Combat({ player, enemyType, onExitCombat }) {
   const bgmRef = useRef(null);
@@ -18,6 +19,8 @@ export default function Combat({ player, enemyType, onExitCombat }) {
   const [showHitEffect, setShowHitEffect] = useState(false);
   const [showMissEffect, setShowMissEffect] = useState(false);
   const [defendNextRound, setDefendNextRound] = useState(false);
+  const [bonusDamage, setBonusDamage] = useState(0);
+  const [bonusCritChance, setBonusCritChance] = useState(0);
 
   // ⭐ Battle Instance Key so React does NOT remount Battle repeatedly
   const [battleKey, setBattleKey] = useState(0);
@@ -27,6 +30,8 @@ export default function Combat({ player, enemyType, onExitCombat }) {
   const bat2Music = "/music/StrongerBat.m4a";
 
   useEffect(() => {
+    stopAllMusic();
+
     const src = enemyType === "bat1" ? bat1Music : bat2Music;
     if (bgmRef.current) {
       bgmRef.current.src = src;
@@ -44,8 +49,11 @@ export default function Combat({ player, enemyType, onExitCombat }) {
     let dmg = 0;
     const atk = stats.ATK || 30;
 
+    let critChance = 0.30 + bonusCritChance / 100;
+    let baseDamage = atk + bonusDamage;
+
     if (type === "normal") dmg = atk;
-    else if (type === "strong" && Math.random() < 0.30) dmg = Math.floor(atk * 2);
+    else if (type === "strong" && Math.random() < critChance) dmg = Math.floor(baseDamage * 2);
 
     if (dmg > 0) {
       setShowHitEffect(true);
@@ -60,6 +68,8 @@ export default function Combat({ player, enemyType, onExitCombat }) {
       setShowMissEffect(true);
 
       setTimeout(() => {
+        setBonusDamage(0);
+        setBonusCritChance(0);
         setShowMissEffect(false);
         setShowFightMenu(false);
         startBattleHell();
@@ -70,6 +80,10 @@ export default function Combat({ player, enemyType, onExitCombat }) {
   // 🩸 Enemy dies
   useEffect(() => {
     if (enemyHp <= 0) {
+      setBonusDamage(0);
+      setBonusCritChance(0);
+      setDefendNextRound(false);
+
       stopMusic();
       onExitCombat();
     }
@@ -140,16 +154,29 @@ export default function Combat({ player, enemyType, onExitCombat }) {
         <div style={{
           position: "absolute",
           bottom: 20,
-          left: 130, 
+          left: 100, 
           display: "grid", 
           gridTemplateColumns: "1fr 1fr 1fr 1fr", 
           gap: "30px",
           animation: "playerIdle 3s ease-in-out infinite",
+          textShadow: "2px 2px 4px black",
         }}>
           <h2>❤️{playerHp}</h2>
           <h2>🗡️{stats.ATK}</h2>
           <h2>👟{stats.SPD}</h2>
           <h2>🛡️{stats.DEF}</h2>
+          {bonusDamage > 0 && (
+          <div style={{
+            position: "absolute",
+            bottom: 0,
+            left: 45,
+            color: "yellow",
+            fontSize: "15px",
+            fontFamily: "Retro Gaming",
+          }}>
+            DEFENSE BUFF: +{bonusDamage} DMG, +{bonusCritChance}% Crit
+          </div>
+        )}
         </div>
 
         {/* Enemy HP */}
@@ -158,6 +185,7 @@ export default function Combat({ player, enemyType, onExitCombat }) {
           top: 30,
           right: 260,
           animation: "batFloat 2.5s ease-in-out infinite",
+          textShadow: "2px 2px 4px black",
         }}>
           <h2>💜{enemyHp}</h2>
         </div>
@@ -169,7 +197,7 @@ export default function Combat({ player, enemyType, onExitCombat }) {
             position: "absolute",
             bottom: 80,
             left: 40,
-            width: 700,
+            width: "40%",
             imageRendering: "pixelated",
             filter: "drop-shadow(0px 0px 25px black)",
             animation: "playerIdle 3s ease-in-out infinite",
@@ -190,7 +218,7 @@ export default function Combat({ player, enemyType, onExitCombat }) {
             position: "absolute",
             top: 80,
             right: 40,
-            width: 500,
+            width: "30%",
             imageRendering: "pixelated",
             filter: "drop-shadow(0px 0px 25px black)",
             animation: "batFloat 2.5s ease-in-out infinite",
@@ -234,7 +262,7 @@ export default function Combat({ player, enemyType, onExitCombat }) {
             style={{
               position: "absolute",
               bottom: 40,
-              left: 1000,
+              left: "50%",
               display: "flex",
               gap: "20px",
             }}
@@ -249,12 +277,19 @@ export default function Combat({ player, enemyType, onExitCombat }) {
             <button
               onClick={() => {
                 setDefendNextRound(true);
+
+                setBonusDamage(prev => prev + 10);
+                setBonusCritChance(prev => prev + 10);
+
                 setShowFightMenu(false);
                 startBattleHell();
               }}
               style={buttonStyle}
             >
               DEFEND
+              <div style={{ fontSize: "12px", color: "#304d6d" }}>
+                +10 DMG, +10% Crit
+              </div>
             </button>
           </div>
         )}
@@ -263,10 +298,20 @@ export default function Combat({ player, enemyType, onExitCombat }) {
         {showFightMenu && (
           <div style={fightMenuStyle}>
             <button onClick={() => performAttack("normal")}>
-              Normal Attack (Always Lands, Base DMG)
+              Base Attack
+              {/* <br/>
+              <span style={{ fontSize: "12px", color: "lightblue" }}>
+                DMG: {stats.ATK + bonusDamage}
+              </span> */}
             </button>
             <button onClick={() => performAttack("strong")}>
-              Strong Attack (30% Chance, Double DMG)
+              Strong Attack
+              <br />
+              <span style={{ fontSize: "12px", color: "lightblue" }}>
+                Crit Chance: {30 + bonusCritChance}%  
+                <br />
+                DMG: {(stats.ATK + bonusDamage) * 2}
+              </span>
             </button>
             <button onClick={() => setShowFightMenu(false)}>Cancel</button>
           </div>
@@ -297,12 +342,13 @@ const buttonStyle = {
   fontSize: "35px",
   fontFamily: "Retro Gaming",
   cursor: "pointer",
+  boxShadow: "2px 2px 4px black",
 };
 
 const fightMenuStyle = {
   position: "absolute",
   bottom: 140,
-  left: 1015,
+  left: "50%",
   border: "2px solid white",
   borderRadius: 10,
   display: "flex",
