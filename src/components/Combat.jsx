@@ -52,7 +52,7 @@ export default function Combat({ player, enemyType, onExitCombat }) {
     let critChance = 0.30 + bonusCritChance / 100;
     let baseDamage = atk + bonusDamage;
 
-    if (type === "normal") dmg = baseDamage;
+    if (type === "normal") dmg = atk;
     else if (type === "strong" && Math.random() < critChance) dmg = Math.floor(baseDamage * 2);
 
     if (dmg > 0) {
@@ -68,6 +68,8 @@ export default function Combat({ player, enemyType, onExitCombat }) {
       setShowMissEffect(true);
 
       setTimeout(() => {
+        setBonusDamage(0);
+        setBonusCritChance(0);
         setShowMissEffect(false);
         setShowFightMenu(false);
         startBattleHell();
@@ -152,9 +154,9 @@ export default function Combat({ player, enemyType, onExitCombat }) {
         <div style={{
           position: "absolute",
           bottom: 20,
-          left: 130, 
+          left: 100, 
           display: "grid", 
-          gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", 
+          gridTemplateColumns: "1fr 1fr 1fr 1fr", 
           gap: "30px",
           animation: "playerIdle 3s ease-in-out infinite",
           textShadow: "2px 2px 4px black",
@@ -277,7 +279,7 @@ export default function Combat({ player, enemyType, onExitCombat }) {
                 setDefendNextRound(true);
 
                 setBonusDamage(prev => prev + 10);
-                setBonusCritChance(prev => prev + 5);
+                setBonusCritChance(prev => prev + 10);
 
                 setShowFightMenu(false);
                 startBattleHell();
@@ -286,7 +288,7 @@ export default function Combat({ player, enemyType, onExitCombat }) {
             >
               DEFEND
               <div style={{ fontSize: "12px", color: "#304d6d" }}>
-                +10 DMG, +5% Crit
+                +10 DMG, +10% Crit
               </div>
             </button>
           </div>
@@ -296,11 +298,11 @@ export default function Combat({ player, enemyType, onExitCombat }) {
         {showFightMenu && (
           <div style={fightMenuStyle}>
             <button onClick={() => performAttack("normal")}>
-              Normal Attack
-              <br/>
+              Base Attack
+              {/* <br/>
               <span style={{ fontSize: "12px", color: "lightblue" }}>
                 DMG: {stats.ATK + bonusDamage}
-              </span>
+              </span> */}
             </button>
             <button onClick={() => performAttack("strong")}>
               Strong Attack
