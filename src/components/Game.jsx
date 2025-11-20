@@ -72,6 +72,8 @@ export default function Game({ player, onReset }) {
   // END combat overlay: resume dungeon & music
   const endCombat = () => {
     setFadeToCombat(true);
+    stopAllMusic();
+    swapMusic();
 
     // Mark enemy as defeated before switching modes
     setDefeatedEnemies((prev) => new Set(prev).add(combatEnemy));
@@ -185,7 +187,7 @@ export default function Game({ player, onReset }) {
       if (dungeonRef.current && typeof dungeonRef.current.pause === "function") {
         dungeonRef.current.pause();
       }
-      if (bgmRef.current) bgmRef.current.pause();
+      stopAllMusic();
 
       setEncounter(null);
       // keep mode as dungeon but show gameOver UI
@@ -418,3 +420,13 @@ export default function Game({ player, onReset }) {
     </div>
   );
 }
+
+export const stopAllMusic = () => {
+    const audios = document.querySelectorAll("audio");
+    audios.forEach(a => {
+      try {
+        a.pause();
+        a.currentTime = 0;
+      } catch {}
+    });
+  };

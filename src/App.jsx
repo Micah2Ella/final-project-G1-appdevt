@@ -8,57 +8,30 @@ import "./App.css";
 import { PlayerHealthProvider } from "./context/PlayerHealth";
 import { BrowserRouter } from "react-router-dom";
 import { PlayerStatsProvider } from "./context/PlayerStats";
+import AudioManager from "./components/AudioManager";
 
 export default function App() {
   const [screen, setScreen] = useState("title");
   const [fade, setFade] = useState(false);
   const [playerData, setPlayerData] = useState(null);
 
-  // -------------------- 🎵 TITLE MUSIC --------------------
-  const titleMusicRef = useRef(null);
-
   useEffect(() => {
-    // Create audio only once
-    if (!titleMusicRef.current) {
-      const audio = new Audio("/music/Title.m4a");
-      audio.loop = true;
-      audio.volume = 0.5;
-      titleMusicRef.current = audio;
-    }
-
-    // Auto-play unlock
-    const unlock = () => {
-      titleMusicRef.current.play().catch(() => {});
-      window.removeEventListener("click", unlock);
+    const unlockHandler = () => {
+      AudioManager.unlock();
+      AudioManager.play("/music/Title.m4a");
+      window.removeEventListener("pointerdown", unlockHandler);
     };
 
-    window.addEventListener("click", unlock);
-    return () => window.removeEventListener("click", unlock);
+    window.addEventListener("pointerdown", unlockHandler);
+
+    return () => window.removeEventListener("pointerdown", unlockHandler);
   }, []);
-
-  // Always reset + restart when going to TITLE
-  const restartTitleMusic = () => {
-    if (!titleMusicRef.current) return;
-
-    titleMusicRef.current.pause();
-    titleMusicRef.current.currentTime = 0; // ← RESET
-    titleMusicRef.current.play().catch(() => {});
-  };
-
-  // Stop Title music when entering gameplay
-  const stopTitleMusic = () => {
-    if (!titleMusicRef.current) return;
-
-    titleMusicRef.current.pause();
-    titleMusicRef.current.currentTime = 0; // ensure clean stop
-  };
 
   // ---------------------------------------------------------
   // SCREEN TRANSITIONS
   // ---------------------------------------------------------
 
   const handleStart = () => {
-    stopTitleMusic();
     setFade(true);
     setTimeout(() => {
       setScreen("characterSelect");
@@ -76,7 +49,7 @@ export default function App() {
 
   const handleCharacterSelect = (character) => {
     setPlayerData(character);
-    stopTitleMusic(); // Starting game → stop music
+    AudioManager.stop();
     setFade(true);
     setTimeout(() => {
       setScreen("gameplay");
@@ -100,7 +73,6 @@ export default function App() {
         {/* ---------------------- TITLE SCREEN ---------------------- */}
         {screen === "title" && (
           <>
-            {restartTitleMusic()}
             <TitleScreen onStart={handleStart} onControls={handleControls} />
           </>
         )}
