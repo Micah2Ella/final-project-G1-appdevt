@@ -290,3 +290,30 @@ html, body {
   50% { transform: scale(1.1) rotate(0deg); opacity: 0.4; }
   100% { transform: scale(1) rotate(30deg); opacity: 0; }
 }
+
+.black-fade-overlay {
+  position: fixed;
+  inset: 0;
+  background: black;
+  z-index: 999; /* ABOVE dungeon, BELOW combat */
+  opacity: 0;
+  animation-fill-mode: forwards;
+}
+
+.fade-to-black {
+  animation: fadeToBlack 0.6s ease-in forwards;
+}
+
+.fade-from-black {
+  animation: fadeFromBlack 0.6s ease-out forwards;
+}
+
+@keyframes fadeToBlack {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeFromBlack {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}

@@ -24,6 +24,11 @@ export default function Game({ player, onReset }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const { hp, takeDamage, heal } = usePlayerHealth();
   const [aethercrestCount, setAethercrestCount] = useState(0);
+  const [fadeToCombat, setFadeToCombat] = useState(false);
+  const [fadeFromCombat, setFadeFromCombat] = useState(false);
+  const scalingBonus = aethercrestCount * 5;
+  const [defeatedEnemies, setDefeatedEnemies] = useState(new Set());
+  const [defeated, setDefeated] = useState({});
 
   // 🔊 ONLY ONE MUSIC FILE NOW
   const dungeonMusic = "/music/Dungeon.m4a";
@@ -40,10 +45,16 @@ export default function Game({ player, onReset }) {
 
   // START combat overlay: pause dungeon & music
   const startCombat = (enemyType) => {
-    setCombatEnemy(enemyType);
-    setMode("combat");
-    setEncounter(null);
-    setIsProcessing(false);
+    setFadeToCombat(true);
+
+    setTimeout(() => {
+      setCombatEnemy(enemyType);
+      setMode("combat");
+      setFadeToCombat(false);
+      setFadeFromCombat(true);
+
+      setTimeout(() => setFadeFromCombat(false), 600);
+    }, 600);
 
     if (dungeonRef.current && typeof dungeonRef.current.pause === "function") {
       try {
@@ -60,20 +71,26 @@ export default function Game({ player, onReset }) {
 
   // END combat overlay: resume dungeon & music
   const endCombat = () => {
-    setCombatEnemy(null);
-    setMode("dungeon");
-    // resume music
-    swapMusic();
-    if (dungeonRef.current && typeof dungeonRef.current.resume === "function") {
-      try {
-        dungeonRef.current.resume();
-      } catch (e) {}
-    }
+    setFadeToCombat(true);
+
+    // Mark enemy as defeated before switching modes
+    setDefeatedEnemies((prev) => new Set(prev).add(combatEnemy));
+
+    setTimeout(() => {
+      setDefeated(prev => ({ ...prev, [encounter.id]: true }));
+      setEncounter(null);
+      setMode("dungeon");
+      setFadeToCombat(false);
+      setFadeFromCombat(true);
+      setTimeout(() => setFadeFromCombat(false), 600);
+      dungeonRef.current?.resume();
+    }, 600);
   };
 
   const handleEncounter = (type) => {
     console.log("Encounter triggered:", type);
-    setEncounter(type);
+    const id = Date.now() + Math.random();
+    setEncounter({ id, type });
     setIsProcessing(false);
 
     // ensure dungeon music is playing if not in combat
@@ -101,11 +118,9 @@ export default function Game({ player, onReset }) {
 
     setIsProcessing(true);
 
-    const scalingBonus = aethercrestCount * 5;
-
-    if (encounter === "fountain") heal(10 + scalingBonus);
-    if (encounter === "bat1") takeDamage(10 + scalingBonus);
-    if (encounter === "bat2") takeDamage(20 + scalingBonus);
+    if (encounter?.type === "fountain") heal(10 + scalingBonus);
+    if (encounter?.type === "bat1") takeDamage(10 + scalingBonus);
+    if (encounter?.type === "bat2") takeDamage(20 + scalingBonus);
 
     console.log("Encounter ended!");
     setEncounter(null);
@@ -186,211 +201,220 @@ export default function Game({ player, onReset }) {
   }, [gameOver, mode]);
 
   return (
-    <div
-      style={{
-        height: "100vh",
-        overflow: "hidden",
-        position: "relative",
-      }}
-    >
-      {/* 🔊 BACKGROUND MUSIC */}
-      <audio ref={bgmRef} src={dungeonMusic} loop />
-
-      <div className="dungeon-wrapper">
-        {/* Dungeon is always mounted and preserved */}
-        <Dungeon
-          ref={dungeonRef}
-          onEncounter={handleEncounter}
-          onCrossroadsChoice={handleCrossroadsChoice}
-          player={player}
-          onStartCombat={startCombat} // in case your Dungeon wants to trigger combat directly
-        />
-      </div>
-
+    <div>
       <div
         style={{
-          height: "40vh",
-          background: "rgba(0,0,0,0.6)",
-          color: "white",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          fontFamily: "Poppins, sans-serif",
+          height: "100vh",
+          overflow: "hidden",
           position: "relative",
-          zIndex: 1,
         }}
       >
-        {intro && (
-          <div className="intro">
-            <div>
-              <h1>Welcome, {player.playerName}!</h1>
-              <h2>You chose: {player.name}</h2>
-              <p>
-                HP: {hp} | ATK: {stats.ATK} | SPD: {stats.SPD} | DEF: {stats.DEF}
-              </p>
-            </div>
-          </div>
+        {fadeToCombat && (
+          <div className="black-fade-overlay fade-to-black" />
+        )}
+        {fadeFromCombat && (
+          <div className="black-fade-overlay fade-from-black" />
         )}
 
-        {gameOver && (
-          <div className="game-over">
-            <div>
-              <img src="/characters/player_death.png" alt="death" />
-              <h1>💀 YOU DIED 💀</h1>
-              <p>
-                HP: {hp} | ATK: {stats.ATK} | SPD: {stats.SPD} | DEF: {stats.DEF}
-              </p>
-              <button
-                onClick={() => {
-                  // Reset flow: call parent onReset to go back to character select
-                  onReset?.();
-                }}
-                disabled={isProcessing}
-                style={{
-                  opacity: isProcessing ? 0.5 : 1,
-                  cursor: isProcessing ? "not-allowed" : "pointer",
-                }}
-              >
-                {isProcessing ? "Processing..." : "Play Again"}
-              </button>
-            </div>
-          </div>
-        )}
+        {/* 🔊 BACKGROUND MUSIC */}
+        <audio ref={bgmRef} src={dungeonMusic} loop />
 
-        {/* ----------------- UI ----------------- */}
-        <div className="game-ui">
-          <div className="statbar">
-            <h2>
-              {player.playerName} | {player.name}
-            </h2>
-            <div className="grouped-stats">
-              <h2>♥️{hp}</h2>
-              <h2>🗡️{stats.ATK}</h2>
-              <h2>👟{stats.SPD}</h2>
-              <h2>🛡️{stats.DEF}</h2>
-            </div>
-          </div>
-
-          <div className="encounter-container">
-            {encounter === "fountain" && (
-              <div className="UI">
-                <h3>HEALING FOUNTAIN</h3>
-                <p>You recover 10 health.</p>
-                <button onClick={handleExitEncounter} disabled={isProcessing}>
-                  {isProcessing ? "Processing..." : "Continue"}
-                </button>
-              </div>
-            )}
-
-            {encounter === "bat1" && (
-              <div className="UI">
-                <h3>NORMAL BAT ENCOUNTER</h3>
-                <p>You face a bat.</p>
-                <button
-                  onClick={() => {
-                    // Start combat overlay inside Game (dungeon music will be paused)
-                    startCombat("bat1");
-                  }}
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? "Processing..." : "Fight"}
-                </button>
-              </div>
-            )}
-
-            {encounter === "bat2" && (
-              <div className="UI">
-                <h3>STRONG BAT ENCOUNTER</h3>
-                <p>You face a strong bat.</p>
-                <button
-                  onClick={() => {
-                    startCombat("bat2");
-                  }}
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? "Processing..." : "Fight"}
-                </button>
-              </div>
-            )}
-
-            {encounter === "crossroads" && (
-              <div className="UI">
-                <h3>CROSSROADS</h3>
-                <p>You reached a fork in the road.</p>
-
-                {crossroadsChoices && (
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "20px",
-                      marginTop: "10px",
-                    }}
-                  >
-                    <button
-                      onClick={() => handlePlayerChoice(crossroadsChoices[0])}
-                      disabled={isProcessing}
-                    >
-                      {isProcessing ? "Processing..." : "Go Left"}
-                    </button>
-
-                    <button
-                      onClick={() => handlePlayerChoice(crossroadsChoices[1])}
-                      disabled={isProcessing}
-                    >
-                      {isProcessing ? "Processing..." : "Go Right"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {encounter === "aethercrest" && (
-              <div className="UI upgrade-ui">
-                <h3>AETHERCREST</h3>
-                <p>Aethercrest obtained. Choose one upgrade:</p>
-
-                <div className="upgrade-buttons">
-                  <button onClick={() => handleUpgrade("ATK")} disabled={isProcessing}>
-                    {isProcessing ? "Processing..." : "+5 🗡️"}
-                  </button>
-                  <button onClick={() => handleUpgrade("SPD")} disabled={isProcessing}>
-                    {isProcessing ? "Processing..." : "+5 👟"}
-                  </button>
-                  <button onClick={() => handleUpgrade("DEF")} disabled={isProcessing}>
-                    {isProcessing ? "Processing..." : "+5 🛡️"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ----------------- COMBAT OVERLAY ----------------- */}
-      {mode === "combat" && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 50,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "rgba(0,0,0,0.6)",
-            backdropFilter: "blur(4px)",
-          }}
-        >
-          <Combat
+        <div className="dungeon-wrapper">
+          {/* Dungeon is always mounted and preserved */}
+          <Dungeon
+            ref={dungeonRef}
+            onEncounter={handleEncounter}
+            onCrossroadsChoice={handleCrossroadsChoice}
             player={player}
-            enemyType={combatEnemy}
-            onExitCombat={() => {
-              // Called by Combat when finished/defeated
-              endCombat();
-            }}
+            onStartCombat={startCombat} // in case your Dungeon wants to trigger combat directly
           />
         </div>
-      )}
+
+        <div
+          style={{
+            height: "40vh",
+            background: "rgba(0,0,0,0.6)",
+            color: "white",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: "Poppins, sans-serif",
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
+          {intro && (
+            <div className="intro">
+              <div>
+                <h1>Welcome, {player.playerName}!</h1>
+                <h2>You chose: {player.name}</h2>
+                <p>
+                  HP: {hp} | ATK: {stats.ATK} | SPD: {stats.SPD} | DEF: {stats.DEF}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {gameOver && (
+            <div className="game-over">
+              <div>
+                <img src="/characters/player_death.png" alt="death" />
+                <h1>💀 YOU DIED 💀</h1>
+                <p>
+                  HP: {hp} | ATK: {stats.ATK} | SPD: {stats.SPD} | DEF: {stats.DEF}
+                </p>
+                <button
+                  onClick={() => {
+                    // Reset flow: call parent onReset to go back to character select
+                    onReset?.();
+                  }}
+                  disabled={isProcessing}
+                  style={{
+                    opacity: isProcessing ? 0.5 : 1,
+                    cursor: isProcessing ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {isProcessing ? "Processing..." : "Play Again"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ----------------- UI ----------------- */}
+          <div className="game-ui">
+            <div className="statbar">
+              <h2>
+                {player.playerName} | {player.name}
+              </h2>
+              <div className="grouped-stats">
+                <h2>♥️{hp}</h2>
+                <h2>🗡️{stats.ATK}</h2>
+                <h2>👟{stats.SPD}</h2>
+                <h2>🛡️{stats.DEF}</h2>
+              </div>
+            </div>
+
+            <div className="encounter-container">
+              {encounter?.type === "fountain" && (
+                <div className="UI">
+                  <h3>HEALING FOUNTAIN</h3>
+                  <p>You recover {10 + scalingBonus} health.</p>
+                  <button onClick={handleExitEncounter} disabled={isProcessing}>
+                    {isProcessing ? "Processing..." : "Continue"}
+                  </button>
+                </div>
+              )}
+
+              {encounter?.type === "bat1" && !defeated[encounter.id] && (
+                <div className="UI">
+                  <h3>NORMAL BAT ENCOUNTER</h3>
+                  <p>You face a bat.</p>
+                  <button
+                    onClick={() => {
+                      // Start combat overlay inside Game (dungeon music will be paused)
+                      startCombat("bat1");
+                    }}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? "Processing..." : "Fight"}
+                  </button>
+                </div>
+              )}
+
+              {encounter?.type === "bat2" && !defeated[encounter.id] && (
+                <div className="UI">
+                  <h3>STRONG BAT ENCOUNTER</h3>
+                  <p>You face a strong bat.</p>
+                  <button
+                    onClick={() => {
+                      startCombat("bat2");
+                    }}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? "Processing..." : "Fight"}
+                  </button>
+                </div>
+              )}
+
+              {encounter?.type === "crossroads" && (
+                <div className="UI">
+                  <h3>CROSSROADS</h3>
+                  <p>You reached a fork in the road.</p>
+
+                  {crossroadsChoices && (
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "20px",
+                        marginTop: "10px",
+                      }}
+                    >
+                      <button
+                        onClick={() => handlePlayerChoice(crossroadsChoices[0])}
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? "Processing..." : "Go Left"}
+                      </button>
+
+                      <button
+                        onClick={() => handlePlayerChoice(crossroadsChoices[1])}
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? "Processing..." : "Go Right"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {encounter?.type === "aethercrest" && (
+                <div className="UI upgrade-ui">
+                  <h3>AETHERCREST</h3>
+                  <p>Aethercrest obtained. Choose one upgrade:</p>
+
+                  <div className="upgrade-buttons">
+                    <button onClick={() => handleUpgrade("ATK")} disabled={isProcessing}>
+                      {isProcessing ? "Processing..." : "+5 🗡️"}
+                    </button>
+                    <button onClick={() => handleUpgrade("SPD")} disabled={isProcessing}>
+                      {isProcessing ? "Processing..." : "+5 👟"}
+                    </button>
+                    <button onClick={() => handleUpgrade("DEF")} disabled={isProcessing}>
+                      {isProcessing ? "Processing..." : "+5 🛡️"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ----------------- COMBAT OVERLAY ----------------- */}
+        {mode === "combat" && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 50,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "rgba(0,0,0,0.6)",
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            <Combat
+              player={player}
+              enemyType={combatEnemy}
+              onExitCombat={() => {
+                // Called by Combat when finished/defeated
+                endCombat();
+              }}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

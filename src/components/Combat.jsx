@@ -61,6 +61,7 @@ export default function Combat({ player, enemyType, onExitCombat }) {
 
       setTimeout(() => {
         setShowMissEffect(false);
+        setShowFightMenu(false);
         startBattleHell();
       }, 850);
     }
@@ -78,25 +79,37 @@ export default function Combat({ player, enemyType, onExitCombat }) {
   useEffect(() => {
     if (playerHp <= 0) {
       stopMusic();
-      alert("YOU DIED!");
       onExitCombat();
     }
   }, [playerHp]);
 
   const startBattleHell = () => {
-    // Move to bullet hell
-    setPhase("bulletHell");
+    setFadeCombat(true);
 
-    // Generate a NEW key so Battle mounts ONCE
-    setBattleKey((prev) => prev + 1);
+    setTimeout(() => {
+      setPhase("bulletHell");
+      setBattleKey(k => k + 1);
+      setFadeCombat(false);
+    }, 500);
+    // // Move to bullet hell
+    // setPhase("bulletHell");
+
+    // // Generate a NEW key so Battle mounts ONCE
+    // setBattleKey((prev) => prev + 1);
   };
 
   // 🟦 Battle ends → apply real damage + return to player turn
-  const endBattleHell = (damageTaken) => {
-    const mitigated = Math.max(1, damageTaken - Math.floor(stats.DEF / 5));
-    takeDamage(mitigated);
-    setDefendNextRound(false);
-    setPhase("playerTurn");
+  const endBattleHell = () => {
+    setFadeCombat(true);
+
+    setTimeout(() => {
+      setPhase("playerTurn");
+      setFadeCombat(false); 
+    }, 500);
+    // const mitigated = Math.max(1, damageTaken - Math.floor(stats.DEF / 5));
+    // takeDamage(mitigated);
+    // setDefendNextRound(false);
+    // setPhase("playerTurn");
   };
 
   const bulletDamage = enemyType === "bat1" ? 5 : 10;
@@ -105,168 +118,173 @@ export default function Combat({ player, enemyType, onExitCombat }) {
   // read if bullet hell
   const isBulletHell = phase === "bulletHell";
 
+  const [fadeCombat, setFadeCombat] = useState(false)
+
   return (
-    <div
-      style={{
-        width: "100vw",
-        height: "100vh",
-        backgroundImage: "url('/background/combat-bg.png')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        color: "white",
-        fontFamily: "Retro Gaming",
-        position: "relative",
-      }}
-    >
-      <audio ref={bgmRef} loop />
-
-      {/* Player HP */}
-      <div style={{
-        position: "absolute",
-        bottom: 20,
-        left: 130, 
-        display: "grid", 
-        gridTemplateColumns: "1fr 1fr 1fr 1fr", 
-        gap: "30px",
-        animation: "playerIdle 3s ease-in-out infinite",
-      }}>
-        <h2>❤️{playerHp}</h2>
-        <h2>🗡️{stats.ATK}</h2>
-        <h2>👟{stats.SPD}</h2>
-        <h2>🛡️{stats.DEF}</h2>
-      </div>
-
-      {/* Enemy HP */}
-      <div style={{
-        position: "absolute",
-        top: 30,
-        right: 260,
-        animation: "batFloat 2.5s ease-in-out infinite",
-      }}>
-        <h2>💜{enemyHp}</h2>
-      </div>
-
-      {/* Player Sprite */}
-      <img
-        src={`/characters/${player.name.toLowerCase()}_combat.png`}
+    <div className={`fade-wrapper ${fadeCombat ? "fade-out" : "fade-in"}`}>
+      <div
         style={{
+          width: "100vw",
+          height: "100vh",
+          backgroundImage: "url('/background/combat-bg.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          color: "white",
+          fontFamily: "Retro Gaming",
+          position: "relative",
+        }}
+      >
+        <audio ref={bgmRef} loop />
+
+        {/* Player HP */}
+        <div style={{
           position: "absolute",
-          bottom: 80,
-          left: 40,
-          width: 700,
-          imageRendering: "pixelated",
-          filter: "drop-shadow(0px 0px 25px black)",
+          bottom: 20,
+          left: 130, 
+          display: "grid", 
+          gridTemplateColumns: "1fr 1fr 1fr 1fr", 
+          gap: "30px",
           animation: "playerIdle 3s ease-in-out infinite",
+        }}>
+          <h2>❤️{playerHp}</h2>
+          <h2>🗡️{stats.ATK}</h2>
+          <h2>👟{stats.SPD}</h2>
+          <h2>🛡️{stats.DEF}</h2>
+        </div>
 
-          opacity: isBulletHell ? 0.1 : 1,
-          transition: "transform 0.5s ease, opacity 0.5s ease",
-        }}
-      />
-
-      {/* Enemy Sprite */}
-      <img
-        src={
-          enemyType === "bat1"
-            ? "/enemy/bat/bat1.png"
-            : "/enemy/bat/bat2.png"
-        }
-        style={{
+        {/* Enemy HP */}
+        <div style={{
           position: "absolute",
-          top: 80,
-          right: 40,
-          width: 500,
-          imageRendering: "pixelated",
-          filter: "drop-shadow(0px 0px 25px black)",
+          top: 30,
+          right: 260,
           animation: "batFloat 2.5s ease-in-out infinite",
+        }}>
+          <h2>💜{enemyHp}</h2>
+        </div>
 
-          opacity: isBulletHell ? 0.1 : 1,
-          transition: "transform 0.5s ease, opacity 0.5s ease",
-        }}
-      />
-
-      {/* POW HIT EFFECT */}
-      {showHitEffect && (
+        {/* Player Sprite */}
         <img
-          src="/effect/AttackLanding.png"
+          src={`/characters/${player.name.toLowerCase()}_combat.png`}
           style={{
             position: "absolute",
-            top: 130,
-            right: 230,
-            height: 250,
+            bottom: 80,
+            left: 40,
+            width: 700,
             imageRendering: "pixelated",
-            animation: "hitPop 0.3s ease-out forwards",
+            filter: "drop-shadow(0px 0px 25px black)",
+            animation: "playerIdle 3s ease-in-out infinite",
+
+            opacity: isBulletHell ? 0.1 : 1,
+            transition: "transform 0.5s ease, opacity 0.5s ease",
           }}
         />
-      )}
-      {showMissEffect && (
+
+        {/* Enemy Sprite */}
         <img
-          src="/effect/AttackMissing.png"
+          src={
+            enemyType === "bat1"
+              ? "/enemy/bat/bat1.png"
+              : "/enemy/bat/bat2.png"
+          }
           style={{
             position: "absolute",
-            top: 130,
-            right: 230,
-            height: 250,
+            top: 80,
+            right: 40,
+            width: 500,
             imageRendering: "pixelated",
-            animation: "missPop 0.3s ease-out forwards",
+            filter: "drop-shadow(0px 0px 25px black)",
+            animation: "batFloat 2.5s ease-in-out infinite",
+
+            opacity: isBulletHell ? 0.1 : 1,
+            transition: "transform 0.5s ease, opacity 0.5s ease",
           }}
         />
-      )}
 
-      {/* Player Turn UI */}
-      {phase === "playerTurn" && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 40,
-            left: 1000,
-            display: "flex",
-            gap: "20px",
-          }}
-        >
-          <button
-            onClick={() => setShowFightMenu(true)}
-            style={buttonStyle}
-          >
-            FIGHT
-          </button>
-
-          <button
-            onClick={() => {
-              setDefendNextRound(true);
-              startBattleHell();
+        {/* POW HIT EFFECT */}
+        {showHitEffect && (
+          <img
+            src="/effect/AttackLanding.png"
+            style={{
+              position: "absolute",
+              top: 130,
+              right: 230,
+              height: 250,
+              imageRendering: "pixelated",
+              animation: "hitPop 0.3s ease-out forwards",
             }}
-            style={buttonStyle}
+          />
+        )}
+        {showMissEffect && (
+          <img
+            src="/effect/AttackMissing.png"
+            style={{
+              position: "absolute",
+              top: 130,
+              right: 230,
+              height: 250,
+              imageRendering: "pixelated",
+              animation: "missPop 0.3s ease-out forwards",
+            }}
+          />
+        )}
+
+        {/* Player Turn UI */}
+        {phase === "playerTurn" && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 40,
+              left: 1000,
+              display: "flex",
+              gap: "20px",
+            }}
           >
-            DEFEND
-          </button>
-        </div>
-      )}
+            <button
+              onClick={() => setShowFightMenu(true)}
+              style={buttonStyle}
+            >
+              FIGHT
+            </button>
 
-      {/* Fight Menu */}
-      {showFightMenu && (
-        <div style={fightMenuStyle}>
-          <button onClick={() => performAttack("normal")}>
-            Normal Attack (Always Lands, Base DMG)
-          </button>
-          <button onClick={() => performAttack("strong")}>
-            Strong Attack (30% Chance, Double DMG)
-          </button>
-          <button onClick={() => setShowFightMenu(false)}>Cancel</button>
-        </div>
-      )}
+            <button
+              onClick={() => {
+                setDefendNextRound(true);
+                setShowFightMenu(false);
+                startBattleHell();
+              }}
+              style={buttonStyle}
+            >
+              DEFEND
+            </button>
+          </div>
+        )}
 
-      {/* Bullet Hell */}
-      {phase === "bulletHell" && (
-        <Battle
-          key={battleKey}              // ← Makes sure timer runs EXACTLY 10 seconds
-          duration={10000}
-          bulletDamage={finalBulletDamage}
-          defendActive={defendNextRound}
-          playerClass={player.name}
-          enemyType={enemyType}
-          onEnd={endBattleHell}
-        />
-      )}
+        {/* Fight Menu */}
+        {showFightMenu && (
+          <div style={fightMenuStyle}>
+            <button onClick={() => performAttack("normal")}>
+              Normal Attack (Always Lands, Base DMG)
+            </button>
+            <button onClick={() => performAttack("strong")}>
+              Strong Attack (30% Chance, Double DMG)
+            </button>
+            <button onClick={() => setShowFightMenu(false)}>Cancel</button>
+          </div>
+        )}
+
+        {/* Bullet Hell */}
+        {phase === "bulletHell" && (
+          <Battle
+            key={battleKey}              // ← Makes sure timer runs EXACTLY 10 seconds
+            duration={10000}
+            bulletDamage={finalBulletDamage}
+            defendActive={defendNextRound}
+            playerClass={player.name}
+            enemyType={enemyType}
+            onEnd={endBattleHell}
+          />
+        )}
+      </div>
     </div>
   );
 }
