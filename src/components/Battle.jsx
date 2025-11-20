@@ -124,7 +124,7 @@ export default function Battle({
 
   const draw = (ctx) => {
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    const bulletScale = 0.3;
+    const bulletScale = 0.4;
     const playerScale = 0.4;
 
     // Player

@@ -12,7 +12,7 @@ export default function CharacterSelect({ onSelect }) {
       name: "Barbarian",
       description:
         "A burnt out clown who smashes things to blow off some steam.",
-      baseStats: { HP: 100, ATK: 300, SPD: 10, DEF: 20 },
+      baseStats: { HP: 100, ATK: 50, SPD: 10, DEF: 20 },
     },
     {
       name: "Rogue",
